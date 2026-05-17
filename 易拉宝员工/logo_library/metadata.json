@@ -1,0 +1,142 @@
+{
+  "brand": "朴道 PUDOW",
+  "description": "朴道品牌 Logo 库，包含多个版本和配色方案",
+  "lastUpdated": "2026-05-17",
+  "logos": [
+    {
+      "id": "pudow-expert-color",
+      "filename": "PUDOW朴道健康水专家-原色.png",
+      "displayName": "PUDOW朴道健康水专家 - 原色版",
+      "variant": "原色",
+      "layout": "horizontal",
+      "textContent": {
+        "english": "PUDOW",
+        "chinese": "朴道",
+        "tagline": "健康水专家",
+        "order": "english-first"
+      },
+      "colors": {
+        "primary": "#0078D7",
+        "primaryName": "科技蓝",
+        "secondary": "#333333",
+        "colorTemperature": "冷色调"
+      },
+      "background": {
+        "recommended": ["white", "light", "浅灰"],
+        "avoid": ["dark", "black"],
+        "description": "适合白色或浅色背景"
+      },
+      "style": {
+        "characteristics": ["专业", "权威", "健康", "科技感"],
+        "complexity": "中等"
+      },
+      "suitableFor": {
+        "bannerStyles": ["科技感", "简约商务", "专业"],
+        "scenarios": ["健康展会", "产品发布", "专业论坛"]
+      },
+      "sizeRecommendation": {
+        "minWidthRatio": 0.18,
+        "maxWidthRatio": 0.30,
+        "preferredWidthRatio": 0.25
+      },
+      "positionPreferences": ["右上角", "左上角"]
+    },
+    {
+      "id": "pudow-expert-white",
+      "filename": "PUDOW朴道健康水专家-反白.png",
+      "displayName": "PUDOW朴道健康水专家 - 反白版",
+      "variant": "反白",
+      "layout": "horizontal",
+      "textContent": {
+        "english": "PUDOW",
+        "chinese": "朴道",
+        "tagline": "健康水专家",
+        "order": "english-first"
+      },
+      "colors": {
+        "primary": "#FFFFFF",
+        "primaryName": "纯白",
+        "colorTemperature": "中性"
+      },
+      "background": {
+        "recommended": ["dark", "black", "深蓝", "深灰"],
+        "avoid": ["white", "light"],
+        "description": "适合深色或黑色背景"
+      },
+      "style": {
+        "characteristics": ["专业", "权威", "高端", "健康"],
+        "complexity": "中等"
+      },
+      "suitableFor": {
+        "bannerStyles": ["高端奢华", "科技感", "专业"],
+        "scenarios": ["高端展会", "夜间活动", "深色背景展示"]
+      },
+      "sizeRecommendation": {
+        "minWidthRatio": 0.18,
+        "maxWidthRatio": 0.30,
+        "preferredWidthRatio": 0.25
+      },
+      "positionPreferences": ["右上角", "左上角"]
+    },
+    {
+      "id": "pudow-expert-black",
+      "filename": "PUDOW朴道健康水专家-墨稿.png",
+      "displayName": "PUDOW朴道健康水专家 - 墨稿版",
+      "variant": "墨稿",
+      "layout": "horizontal",
+      "textContent": {
+        "english": "PUDOW",
+        "chinese": "朴道",
+        "tagline": "健康水专家",
+        "order": "english-first"
+      },
+      "colors": {
+        "primary": "#000000",
+        "primaryName": "纯黑",
+        "colorTemperature": "中性"
+      },
+      "background": {
+        "recommended": ["white", "light", "浅灰"],
+        "avoid": ["dark", "black"],
+        "description": "适合白色或浅色背景"
+      },
+      "style": {
+        "characteristics": ["经典", "专业", "简约", "权威"],
+        "complexity": "中等"
+      },
+      "suitableFor": {
+        "bannerStyles": ["简约商务", "专业", "经典"],
+        "scenarios": ["正式场合", "文档打印", "商务活动"]
+      },
+      "sizeRecommendation": {
+        "minWidthRatio": 0.18,
+        "maxWidthRatio": 0.30,
+        "preferredWidthRatio": 0.25
+      },
+      "positionPreferences": ["右上角", "左上角"]
+    }
+  ],
+  "placementRules": {
+    "safeMarginTop": 20,
+    "safeMarginSide": 20,
+    "minDistanceFromText": 30,
+    "minDistanceFromProduct": 40,
+    "allowedPositions": ["左上角", "右上角"],
+    "defaultPosition": "右上角",
+    "opacityRange": [0.9, 1.0]
+  },
+  "usageGuidelines": {
+    "colorVersions": {
+      "原色": "彩色版本，适合白色或浅色背景，用于日常宣传和展示",
+      "反白": "白色版本，适合深色或黑色背景，用于高端场合和夜间活动",
+      "墨稿": "黑色版本，适合白色或浅色背景，用于正式文档和商务场合"
+    },
+    "recommendations": {
+      "科技感易拉宝": "使用原色版本，搭配蓝色或白色背景",
+      "简约商务易拉宝": "使用墨稿版本，搭配白色或浅灰背景",
+      "高端奢华易拉宝": "使用反白版本，搭配深色或黑色背景",
+      "健康主题易拉宝": "使用健康水专家版本，强调专业性",
+      "自然清新易拉宝": "使用原色版本，搭配浅蓝或浅绿背景"
+    }
+  }
+}

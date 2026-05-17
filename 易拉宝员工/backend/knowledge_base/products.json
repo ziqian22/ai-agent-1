@@ -1,0 +1,253 @@
+[
+  {
+    "id": "product_20260517_174507",
+    "product_info": {
+      "product_name": "勇士K6/K9即开直饮机",
+      "brand": "朴道健康水专家",
+      "slogan": "澎湃开水持续出 绿色节能新选择",
+      "features": [
+        "纳米单晶磨石亲加热 非金属材质更安全",
+        "无加热水箱设计 杜绝千滚水和二次污染",
+        "LED紫外灯过滤式杀菌 24小时循环守护",
+        "冻膜可视窗设计 健康饮水看得见",
+        "接水高度达38cm 适合大多数接水壶"
+      ],
+      "product_type": "即开直饮机",
+      "scenes": [
+        "商务办公",
+        "政府机关",
+        "医院病房",
+        "高等院校",
+        "高铁机场"
+      ],
+      "colors": [
+        "黑色",
+        "银灰色"
+      ],
+      "style": "科技感",
+      "main_colors": "蓝色+白色"
+    },
+    "image_path": "http://localhost:8000/knowledge_base/files/product_20260517_174507/product.png",
+    "logo_path": null,
+    "created_at": "2026-05-17T17:45:07.820129",
+    "updated_at": "2026-05-17T17:45:07.820129",
+    "generation_history": [
+      {
+        "style": "简约商务（配合真实场景背景）",
+        "result_files": [
+          "results\\banner_1779011336_0.png"
+        ],
+        "user_rating": null,
+        "created_at": "2026-05-17T17:49:05.300301"
+      },
+      {
+        "style": "科技感",
+        "result_files": [
+          "results\\banner_1779031398_0.png",
+          "results\\banner_1779031411_0.png",
+          "results\\banner_1779031417_0.png",
+          "results\\banner_1779031424_0.png",
+          "results\\banner_1779031431_0.png"
+        ],
+        "user_rating": null,
+        "created_at": "2026-05-17T23:23:55.770795"
+      }
+    ]
+  },
+  {
+    "id": "product_20260517_180151",
+    "product_info": {
+      "product_name": "名士N5智能直饮机",
+      "brand": "朴道健康水专家",
+      "slogan": "轻商务 实力派 小身材蕴含大能量",
+      "features": [
+        "5级精纯过滤",
+        "15L/h大流量热水",
+        "LED-UV紫外杀菌",
+        "智能屏幕设计",
+        "IOT智能管控",
+        "304全钢管路配置"
+      ],
+      "product_type": "智能直饮机",
+      "scenes": [
+        "中小型办公室",
+        "医院",
+        "办事大厅"
+      ],
+      "colors": [
+        "白色",
+        "黑色"
+      ],
+      "style": "科技感",
+      "main_colors": "蓝色+白色"
+    },
+    "image_path": "http://localhost:8000/knowledge_base/files/product_20260517_180151/product.png",
+    "logo_path": null,
+    "created_at": "2026-05-17T18:01:51.779086",
+    "updated_at": "2026-05-17T18:01:51.779086",
+    "generation_history": [
+      {
+        "style": "科技感",
+        "result_files": [
+          "results\\banner_1779027605_0.png",
+          "results\\banner_1779027609_0.png",
+          "results\\banner_1779027614_0.png",
+          "results\\banner_1779027620_0.png",
+          "results\\banner_1779027626_0.png"
+        ],
+        "user_rating": null,
+        "created_at": "2026-05-17T22:20:29.125389"
+      }
+    ]
+  },
+  {
+    "id": "product_20260517_214255",
+    "product_info": {
+      "product_name": "HS007智能直饮机",
+      "brand": "PUDOW",
+      "slogan": "告别阴阳水 持续出热水",
+      "features": [
+        "15L大热胆，持续出热水",
+        "4重深度过滤+LED-UV杀菌",
+        "IOT智能云平台管理",
+        "定时开关机节能设计"
+      ],
+      "product_type": "智能直饮机",
+      "scenes": [
+        "商务办公",
+        "医院病房",
+        "工厂"
+      ],
+      "colors": [
+        "白色",
+        "蓝色"
+      ],
+      "style": "科技感",
+      "main_colors": "蓝色+白色"
+    },
+    "image_path": "http://localhost:8000/knowledge_base/files/product_20260517_214255/product.png",
+    "logo_path": null,
+    "created_at": "2026-05-17T21:42:55.026911",
+    "updated_at": "2026-05-17T21:42:55.026911",
+    "generation_history": [
+      {
+        "style": "科技感",
+        "result_files": [
+          "results\\banner_1779026531_0.png",
+          "results\\banner_1779026536_0.png",
+          "results\\banner_1779026575_0.png",
+          "results\\banner_1779026624_0.png"
+        ],
+        "user_rating": null,
+        "created_at": "2026-05-17T22:03:47.980259"
+      }
+    ]
+  },
+  {
+    "id": "product_20260518_002005",
+    "product_info": {
+      "product_name": "HS008商用智能直饮机",
+      "brand": "朴道健康水专家",
+      "slogan": "高峰期饮水不将就，可供150人同时接饮热水",
+      "features": [
+        "30L连续热水量，可供150人同时接饮",
+        "3000W大功率，步进式加热杜绝千滚水",
+        "304不锈钢热胆，多重安全防护",
+        "智能冲洗，自动清洗保证水质新鲜",
+        "38CM大接水空间，适配各种水壶",
+        "定时开关机，节能省电"
+      ],
+      "product_type": "商用智能直饮机",
+      "scenes": [
+        "大型办公职场",
+        "国宾企业",
+        "政府机关"
+      ],
+      "colors": [
+        "深蓝色",
+        "白色"
+      ],
+      "style": "科技感",
+      "main_colors": "蓝色+白色"
+    },
+    "image_path": "http://localhost:8000/knowledge_base/files/product_20260518_002005/product.png",
+    "logo_path": null,
+    "created_at": "2026-05-18T00:20:05.256923",
+    "updated_at": "2026-05-18T00:20:05.256923",
+    "generation_history": [
+      {
+        "style": "科技感",
+        "result_files": [
+          "results\\banner_1779035587_0.png",
+          "results\\banner_1779035609_0.png",
+          "results\\banner_1779035617_0.png",
+          "results\\banner_1779035625_0.png"
+        ],
+        "user_rating": null,
+        "created_at": "2026-05-18T00:39:08.333259"
+      }
+    ]
+  },
+  {
+    "id": "product_20260518_005649",
+    "product_info": {
+      "product_name": "智能直饮机NS005",
+      "brand": "PUDOW",
+      "slogan": "创芯科技 净护健康 颜值与实力并存",
+      "features": [
+        "5级精细过滤",
+        "智能屏显",
+        "压缩机制冷",
+        "热温/热冰机型可选",
+        "30秒速热技术"
+      ],
+      "product_type": "智能直饮机",
+      "scenes": [
+        "办公室",
+        "会议室",
+        "接待室",
+        "主管办公室",
+        "外场"
+      ],
+      "colors": [
+        "黑色",
+        "白色",
+        "灰色"
+      ],
+      "style": "简约商务",
+      "main_colors": "蓝色+白色",
+      "num_images": 1
+    },
+    "image_path": "http://localhost:8000/knowledge_base/files/product_20260518_005649/product.png",
+    "logo_path": null,
+    "created_at": "2026-05-18T00:56:49.891773",
+    "updated_at": "2026-05-18T00:56:49.891773",
+    "generation_history": [
+      {
+        "style": "简约商务+自然清新",
+        "result_files": [
+          "results\\banner_1779037280_0.png",
+          "results\\banner_1779037288_0.png"
+        ],
+        "user_rating": null,
+        "created_at": "2026-05-18T01:05:17.111778"
+      },
+      {
+        "style": "自然清新",
+        "result_files": [
+          "results\\banner_1779037971_0.png"
+        ],
+        "user_rating": null,
+        "created_at": "2026-05-18T01:14:39.507975"
+      },
+      {
+        "style": "简约商务",
+        "result_files": [
+          "results\\banner_1779038534_0.png"
+        ],
+        "user_rating": null,
+        "created_at": "2026-05-18T01:23:18.721167"
+      }
+    ]
+  }
+]

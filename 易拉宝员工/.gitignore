@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Streamlit
+.streamlit/
+
+# 环境变量
+.env
+.env.local
+
+# 测试结果
+results/
+temp_uploads/
+knowledge_base/*.db
+logo_library/*.png
+logo_library/*.jpg
+generation_history.json
+
+# Node
+node_modules/
+dist/
+.cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

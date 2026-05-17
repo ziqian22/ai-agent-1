@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logo 功能完整测试</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f7fa;
+    }
+    .header {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .test-section {
+      background: white;
+      margin: 20px 0;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #303133;
+      border-bottom: 2px solid #409eff;
+      padding-bottom: 10px;
+    }
+    .step {
+      background: #f5f7fa;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+      border-left: 4px solid #409eff;
+    }
+    .step-title {
+      font-weight: bold;
+      color: #409eff;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      background: #409eff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #66b1ff;
+    }
+    button:disabled {
+      background: #c0c4cc;
+      cursor: not-allowed;
+    }
+    .result {
+      margin-top: 10px;
+      padding: 15px;
+      background: #f5f7fa;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .success {
+      color: #67c23a;
+    }
+    .error {
+      color: #f56c6c;
+    }
+    .warning {
+      color: #e6a23c;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+      border: 1px solid #dcdfe6;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    .banner-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .banner-item {
+      border: 2px solid #e4e7ed;
+      border-radius: 8px;
+      padding: 10px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .banner-item:hover {
+      border-color: #409eff;
+      box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
+    }
+    .banner-item.selected {
+      border-color: #67c23a;
+      background: #f0f9ff;
+    }
+    .banner-item img {
+      width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+    .banner-item .banner-name {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #606266;
+      text-align: center;
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      margin-left: 10px;
+    }
+    .status.pending {
+      background: #e6a23c;
+      color: white;
+    }
+    .status.success {
+      background: #67c23a;
+      color: white;
+    }
+    .status.error {
+      background: #f56c6c;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🎨 Logo 功能完整测试流程</h1>
+    <p>按照步骤测试 Logo 功能的完整流程</p>
+  </div>
+
+  <!-- 步骤 1: 检查后端状态 -->
+  <div class="test-section">
+    <h2>步骤 1: 检查后端状态</h2>
+    <div class="step">
+      <div class="step-title">检查 Logo 库 API 是否正常</div>
+      <button onclick="checkBackend()">检查后端</button>
+      <div id="backend-result" class="result"></div>
+    </div>
+  </div>
+
+  <!-- 步骤 2: 查看已有的易拉宝 -->
+  <div class="test-section">
+    <h2>步骤 2: 选择已生成的易拉宝</h2>
+    <div class="step">
+      <div class="step-title">从生成记录中选择易拉宝进行测试</div>
+      <button onclick="loadGenerationHistory()">加载生成记录</button>
+      <div id="history-result" class="result"></div>
+      <div id="banner-grid" class="banner-grid"></div>
+    </div>
+  </div>
+
+  <!-- 步骤 3: 分析易拉宝并推荐 Logo -->
+  <div class="test-section">
+    <h2>步骤 3: 分析易拉宝并推荐 Logo</h2>
+    <div class="step">
+      <div class="step-title">使用 Claude Vision 分析选中的易拉宝</div>
+      <button id="analyze-btn" onclick="analyzeBanners()" disabled>分析易拉宝</button>
+      <span id="analyze-status"></span>
+      <div id="analyze-result" class="result"></div>
+    </div>
+  </div>
+
+  <!-- 步骤 4: 合成 Logo -->
+  <div class="test-section">
+    <h2>步骤 4: 合成 Logo 到易拉宝</h2>
+    <div class="step">
+      <div class="step-title">选择 Logo 和位置，合成到易拉宝上</div>
+
+      <label>选择 Logo:</label>
+      <select id="compose-logo-id">
+        <option value="">请先加载 Logo 库</option>
+      </select>
+
+      <label>选择位置:</label>
+      <select id="compose-position">
+        <option value="左上角">左上角</option>
+        <option value="右上角">右上角</option>
+      </select>
+
+      <button id="compose-btn" onclick="composeLogo()" disabled>合成 Logo</button>
+      <span id="compose-status"></span>
+      <div id="compose-result" class="result"></div>
+    </div>
+  </div>
+
+  <!-- 步骤 5: 查看最终结果 -->
+  <div class="test-section">
+    <h2>步骤 5: 查看最终结果</h2>
+    <div class="step">
+      <div class="step-title">对比原图和合成后的图片</div>
+      <div id="final-result"></div>
+    </div>
+  </div>
+
+  <script>
+    const BASE_URL = 'http://localhost:8000';
+    let selectedBanners = [];
+    let logoLibrary = [];
+    let analysisResults = [];
+
+    function log(elementId, message, className = '') {
+      const element = document.getElementById(elementId);
+      if (className) {
+        element.innerHTML = `<span class="${className}">${message}</span>`;
+      } else {
+        element.innerHTML = message;
+      }
+    }
+
+    function setStatus(elementId, text, type) {
+      const element = document.getElementById(elementId);
+      element.innerHTML = `<span class="status ${type}">${text}</span>`;
+    }
+
+    // 步骤 1: 检查后端
+    async function checkBackend() {
+      log('backend-result', '正在检查后端...');
+      try {
+        // 检查 Logo 库
+        const response = await fetch(`${BASE_URL}/api/logo-library`);
+        const data = await response.json();
+
+        if (response.ok) {
+          logoLibrary = data.logos;
+
+          // 更新 Logo 选择器
+          const select = document.getElementById('compose-logo-id');
+          select.innerHTML = logoLibrary.map(logo =>
+            `<option value="${logo.id}">${logo.displayName}</option>`
+          ).join('');
+
+          const result = `✅ 后端正常运行
+
+📚 Logo 库信息:
+  品牌: ${data.brand}
+  Logo 数量: ${logoLibrary.length}
+
+Logo 列表:
+${logoLibrary.map(logo => `  ✓ ${logo.displayName} (${logo.variant})`).join('\n')}
+
+✅ 可以继续下一步`;
+          log('backend-result', result, 'success');
+        } else {
+          log('backend-result', `❌ 后端错误: ${JSON.stringify(data)}`, 'error');
+        }
+      } catch (error) {
+        log('backend-result', `❌ 无法连接到后端: ${error.message}\n\n请确保后端正在运行 (python backend/main.py)`, 'error');
+      }
+    }
+
+    // 步骤 2: 加载生成记录
+    async function loadGenerationHistory() {
+      log('history-result', '正在加载生成记录...');
+      try {
+        const response = await fetch(`${BASE_URL}/api/generation-history`);
+        const data = await response.json();
+
+        if (response.ok && data.history.length > 0) {
+          const history = data.history;
+          log('history-result', `✅ 找到 ${history.length} 条生成记录\n\n点击下方图片选择要测试的易拉宝（可多选）`, 'success');
+
+          // 显示易拉宝网格
+          const grid = document.getElementById('banner-grid');
+          grid.innerHTML = history.map((record, recordIndex) => {
+            return record.image_urls.map((url, imgIndex) => `
+              <div class="banner-item" onclick="toggleBanner('${url}', this)">
+                <img src="${url}" alt="易拉宝">
+                <div class="banner-name">${record.product_name || '未命名'} #${imgIndex + 1}</div>
+              </div>
+            `).join('');
+          }).join('');
+
+        } else {
+          log('history-result', `⚠️ 没有找到生成记录
+
+请先在主应用中生成一些易拉宝，然后再回来测试 Logo 功能。
+
+或者手动输入易拉宝 URL 进行测试。`, 'warning');
+        }
+      } catch (error) {
+        log('history-result', `❌ 加载失败: ${error.message}`, 'error');
+      }
+    }
+
+    // 切换易拉宝选择
+    function toggleBanner(url, element) {
+      const index = selectedBanners.indexOf(url);
+      if (index > -1) {
+        selectedBanners.splice(index, 1);
+        element.classList.remove('selected');
+      } else {
+        selectedBanners.push(url);
+        element.classList.add('selected');
+      }
+
+      // 更新按钮状态
+      const analyzeBtn = document.getElementById('analyze-btn');
+      analyzeBtn.disabled = selectedBanners.length === 0;
+
+      log('history-result', `✅ 已选择 ${selectedBanners.length} 张易拉宝\n\n${selectedBanners.join('\n')}`, 'success');
+    }
+
+    // 步骤 3: 分析易拉宝
+    async function analyzeBanners() {
+      if (selectedBanners.length === 0) {
+        log('analyze-result', '❌ 请先选择易拉宝', 'error');
+        return;
+      }
+
+      log('analyze-result', '正在分析易拉宝...\n\n这可能需要几秒钟，请稍候...');
+      setStatus('analyze-status', '分析中...', 'pending');
+
+      try {
+        const response = await fetch(`${BASE_URL}/api/analyze-banners-for-logo`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ banner_urls: selectedBanners })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          analysisResults = data.recommendations;
+
+          const result = `✅ 分析完成！
+
+${analysisResults.map((rec, i) => {
+  if (rec.error) {
+    return `易拉宝 ${i+1}: ❌ ${rec.error}`;
+  }
+
+  const logo = logoLibrary.find(l => l.id === rec.recommended_logo.id);
+  return `易拉宝 ${i+1}:
+  📍 URL: ${selectedBanners[i]}
+
+  🎨 风格分析:
+    主色调: ${rec.analysis.primary_color}
+    风格: ${rec.analysis.style}
+    背景类型: ${rec.analysis.background_type}
+
+  💡 推荐 Logo:
+    名称: ${logo?.displayName || rec.recommended_logo.id}
+    位置: ${rec.recommended_logo.position}
+    尺寸比例: ${rec.recommended_logo.size_ratio}
+
+  📝 推荐理由:
+    ${rec.reason}`;
+}).join('\n\n' + '='.repeat(60) + '\n\n')}
+
+✅ 可以继续下一步合成 Logo`;
+
+          log('analyze-result', result, 'success');
+          setStatus('analyze-status', '完成', 'success');
+
+          // 启用合成按钮
+          document.getElementById('compose-btn').disabled = false;
+
+          // 自动选择第一个推荐的 Logo
+          if (analysisResults.length > 0 && !analysisResults[0].error) {
+            document.getElementById('compose-logo-id').value = analysisResults[0].recommended_logo.id;
+            document.getElementById('compose-position').value = analysisResults[0].recommended_logo.position;
+          }
+
+        } else {
+          log('analyze-result', `❌ 分析失败: ${JSON.stringify(data)}`, 'error');
+          setStatus('analyze-status', '失败', 'error');
+        }
+      } catch (error) {
+        log('analyze-result', `❌ 错误: ${error.message}`, 'error');
+        setStatus('analyze-status', '错误', 'error');
+      }
+    }
+
+    // 步骤 4: 合成 Logo
+    async function composeLogo() {
+      if (selectedBanners.length === 0) {
+        log('compose-result', '❌ 请先选择易拉宝', 'error');
+        return;
+      }
+
+      const bannerUrl = selectedBanners[0]; // 使用第一个选中的易拉宝
+      const logoId = document.getElementById('compose-logo-id').value;
+      const position = document.getElementById('compose-position').value;
+
+      log('compose-result', '正在合成 Logo...\n\n请稍候...');
+      setStatus('compose-status', '合成中...', 'pending');
+
+      try {
+        const response = await fetch(`${BASE_URL}/api/compose-logo`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            banner_url: bannerUrl,
+            logo_id: logoId,
+            position: position
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          const logo = logoLibrary.find(l => l.id === logoId);
+          const result = `✅ Logo 合成完成！
+
+📍 原始易拉宝: ${bannerUrl}
+🎨 使用 Logo: ${logo?.displayName || logoId}
+📐 位置: ${position}
+📏 尺寸比例: ${data.logo_info.size_ratio}
+
+🖼️ 最终图片: ${data.final_url}`;
+
+          log('compose-result', result, 'success');
+          setStatus('compose-status', '完成', 'success');
+
+          // 显示对比图
+          showFinalResult(bannerUrl, data.final_url, logo?.displayName || logoId, position);
+
+        } else {
+          log('compose-result', `❌ 合成失败: ${JSON.stringify(data)}`, 'error');
+          setStatus('compose-status', '失败', 'error');
+        }
+      } catch (error) {
+        log('compose-result', `❌ 错误: ${error.message}`, 'error');
+        setStatus('compose-status', '错误', 'error');
+      }
+    }
+
+    // 步骤 5: 显示最终结果
+    function showFinalResult(originalUrl, finalUrl, logoName, position) {
+      const html = `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <div>
+            <h3>原始易拉宝</h3>
+            <img src="${originalUrl}" style="width: 100%; border: 2px solid #e4e7ed; border-radius: 8px;">
+          </div>
+          <div>
+            <h3>添加 Logo 后</h3>
+            <p style="color: #67c23a;">✓ ${logoName} - ${position}</p>
+            <img src="${finalUrl}" style="width: 100%; border: 2px solid #67c23a; border-radius: 8px;">
+          </div>
+        </div>
+        <div style="margin-top: 20px; padding: 15px; background: #f0f9ff; border-radius: 8px; border-left: 4px solid #409eff;">
+          <strong>✅ 测试完成！</strong>
+          <p>Logo 已成功合成到易拉宝上。你可以:</p>
+          <ul>
+            <li>选择其他易拉宝继续测试</li>
+            <li>尝试不同的 Logo 和位置</li>
+            <li>在主应用中使用这个功能</li>
+          </ul>
+        </div>
+      `;
+      document.getElementById('final-result').innerHTML = html;
+    }
+
+    // 页面加载时自动检查后端
+    window.onload = function() {
+      checkBackend();
+    };
+  </script>
+</body>
+</html>

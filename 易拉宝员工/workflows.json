@@ -1,0 +1,63 @@
+{
+  "workflows": [
+    {
+      "id": "1991530280437628929",
+      "name": "全能图片pro",
+      "description": "",
+      "type": "workflow",
+      "node_info_template": [],
+      "created_at": "2026-05-15T12:32:57.115415"
+    },
+    {
+      "id": "2053136327381659650",
+      "name": "商品一键宣传海报",
+      "description": "",
+      "type": "ai-app",
+      "node_info_template": [
+        {
+          "nodeId": "25",
+          "fieldName": "image",
+          "fieldType": "image",
+          "description": "产品图片",
+          "defaultValue": ""
+        }
+      ],
+      "created_at": "2026-05-15T12:39:43.794433"
+    },
+    {
+      "id": "1892823120414203905",
+      "name": "一键万能商品海报",
+      "description": "",
+      "type": "workflow",
+      "node_info_template": [],
+      "created_at": "2026-05-15T17:46:28.509672"
+    }
+  ],
+  "test_history": [
+    {
+      "test_id": "test_20260515_123346",
+      "timestamp": "2026-05-15T12:33:46.088213",
+      "workflow_id": "1991530280437628929",
+      "workflow_name": "全能图片pro",
+      "task_id": "2055144424475926530",
+      "params": {
+        "nodeInfoList": []
+      },
+      "results": [
+        {
+          "url": "https://rh-images-1252422369.cos.ap-beijing.myqcloud.com/1e034a2b7211c1ac345c78ec39b37db0/output/ComfyUI_00001_xuxdo_1778819613.png",
+          "nodeId": "4",
+          "outputType": "png",
+          "text": null
+        }
+      ],
+      "saved_images": [
+        "results\\test_20260515_123346\\result_0.png"
+      ],
+      "status": "SUCCESS",
+      "cost_time": "28",
+      "rating": 0,
+      "notes": ""
+    }
+  ]
+}

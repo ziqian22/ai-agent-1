@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logo 功能测试</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    .test-section h2 {
+      margin-top: 0;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      background: #409eff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+    button:hover {
+      background: #66b1ff;
+    }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f5f7fa;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .success {
+      color: #67c23a;
+    }
+    .error {
+      color: #f56c6c;
+    }
+  </style>
+</head>
+<body>
+  <h1>Logo 功能测试页面</h1>
+
+  <div class="test-section">
+    <h2>1. 测试 Logo 库 API</h2>
+    <button onclick="testLogoLibrary()">测试获取 Logo 库</button>
+    <div id="logo-result" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. 测试静态文件访问</h2>
+    <button onclick="testStaticFiles()">测试 Logo 文件访问</button>
+    <div id="static-result" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. 测试分析 API</h2>
+    <p>输入易拉宝 URL（多个用逗号分隔）:</p>
+    <input type="text" id="banner-urls" style="width: 100%; padding: 8px;"
+           placeholder="http://localhost:8000/results/banner_xxx.png, ...">
+    <button onclick="testAnalyze()">测试分析</button>
+    <div id="analyze-result" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>4. 测试合成 API</h2>
+    <p>易拉宝 URL:</p>
+    <input type="text" id="compose-banner-url" style="width: 100%; padding: 8px;"
+           placeholder="http://localhost:8000/results/banner_xxx.png">
+    <p>Logo ID:</p>
+    <select id="compose-logo-id" style="width: 100%; padding: 8px;">
+      <option value="pudow-expert-color">朴道健康水专家 - 原色</option>
+      <option value="pudow-expert-white">朴道健康水专家 - 白色</option>
+      <option value="pudow-expert-black">朴道健康水专家 - 黑色</option>
+    </select>
+    <p>位置:</p>
+    <select id="compose-position" style="width: 100%; padding: 8px;">
+      <option value="左上角">左上角</option>
+      <option value="右上角">右上角</option>
+    </select>
+    <button onclick="testCompose()">测试合成</button>
+    <div id="compose-result" class="result"></div>
+  </div>
+
+  <script>
+    const BASE_URL = 'http://localhost:8000';
+
+    function log(elementId, message, isError = false) {
+      const element = document.getElementById(elementId);
+      const className = isError ? 'error' : 'success';
+      element.innerHTML = `<span class="${className}">${message}</span>`;
+    }
+
+    async function testLogoLibrary() {
+      log('logo-result', '正在测试...');
+      try {
+        const response = await fetch(`${BASE_URL}/api/logo-library`);
+        const data = await response.json();
+
+        if (response.ok) {
+          const result = `✅ 成功获取 Logo 库
+品牌: ${data.brand}
+Logo 数量: ${data.logos.length}
+
+Logo 列表:
+${data.logos.map(logo => `  - ${logo.id}: ${logo.displayName} (${logo.variant})`).join('\n')}
+
+放置规则:
+${JSON.stringify(data.placementRules, null, 2)}`;
+          log('logo-result', result);
+        } else {
+          log('logo-result', `❌ 失败: ${JSON.stringify(data)}`, true);
+        }
+      } catch (error) {
+        log('logo-result', `❌ 错误: ${error.message}`, true);
+      }
+    }
+
+    async function testStaticFiles() {
+      log('static-result', '正在测试...');
+      const files = [
+        'PUDOW朴道健康水专家-原色.png',
+        'PUDOW朴道健康水专家-反白.png',
+        'PUDOW朴道健康水专家-墨稿.png'
+      ];
+
+      let results = [];
+      for (const file of files) {
+        try {
+          const url = `${BASE_URL}/logo_library/${file}`;
+          const response = await fetch(url, { method: 'HEAD' });
+          if (response.ok) {
+            results.push(`✅ ${file} - 可访问`);
+          } else {
+            results.push(`❌ ${file} - 状态码 ${response.status}`);
+          }
+        } catch (error) {
+          results.push(`❌ ${file} - 错误: ${error.message}`);
+        }
+      }
+
+      log('static-result', results.join('\n'));
+    }
+
+    async function testAnalyze() {
+      log('analyze-result', '正在分析...');
+      const urlsInput = document.getElementById('banner-urls').value;
+      if (!urlsInput.trim()) {
+        log('analyze-result', '❌ 请输入易拉宝 URL', true);
+        return;
+      }
+
+      const urls = urlsInput.split(',').map(u => u.trim()).filter(u => u);
+
+      try {
+        const response = await fetch(`${BASE_URL}/api/analyze-banners-for-logo`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ banner_urls: urls })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          const result = `✅ 分析完成
+推荐数量: ${data.recommendations.length}
+
+${data.recommendations.map((rec, i) => {
+  if (rec.error) {
+    return `易拉宝 ${i+1}: ❌ ${rec.error}`;
+  }
+  return `易拉宝 ${i+1}:
+  推荐 Logo: ${rec.recommended_logo.id}
+  位置: ${rec.recommended_logo.position}
+  尺寸比例: ${rec.recommended_logo.size_ratio}
+  理由: ${rec.reason}`;
+}).join('\n\n')}`;
+          log('analyze-result', result);
+        } else {
+          log('analyze-result', `❌ 失败: ${JSON.stringify(data)}`, true);
+        }
+      } catch (error) {
+        log('analyze-result', `❌ 错误: ${error.message}`, true);
+      }
+    }
+
+    async function testCompose() {
+      log('compose-result', '正在合成...');
+      const bannerUrl = document.getElementById('compose-banner-url').value;
+      const logoId = document.getElementById('compose-logo-id').value;
+      const position = document.getElementById('compose-position').value;
+
+      if (!bannerUrl.trim()) {
+        log('compose-result', '❌ 请输入易拉宝 URL', true);
+        return;
+      }
+
+      try {
+        const response = await fetch(`${BASE_URL}/api/compose-logo`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            banner_url: bannerUrl,
+            logo_id: logoId,
+            position: position
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          const result = `✅ 合成完成
+最终图片: ${data.final_url}
+Logo 信息:
+  ID: ${data.logo_info.id}
+  名称: ${data.logo_info.name}
+  位置: ${data.logo_info.position}
+  尺寸比例: ${data.logo_info.size_ratio}
+
+<img src="${data.final_url}" style="max-width: 300px; margin-top: 10px;">`;
+          document.getElementById('compose-result').innerHTML = result;
+        } else {
+          log('compose-result', `❌ 失败: ${JSON.stringify(data)}`, true);
+        }
+      } catch (error) {
+        log('compose-result', `❌ 错误: ${error.message}`, true);
+      }
+    }
+  </script>
+</body>
+</html>
