@@ -207,7 +207,6 @@ def generate_banner_prompt(product_info, style_config=None):
 
 【顶部区域】
 内容:
-- 品牌名称: "{brand}"（次要信息）
 - 产品名称: "{product_name}"（重点）
 - 核心卖点: "{slogan}"（重点）
 
@@ -217,7 +216,6 @@ def generate_banner_prompt(product_info, style_config=None):
 - 核心卖点可以使用艺术字体或特殊排版，增加设计感
 - 两者不需要对齐，可以错开排列，留有呼吸感
 - 避免所有元素都对齐，打破对称增加设计感
-- 品牌名称较小，作为辅助信息
 
 【中部区域 - 视觉焦点】
 内容:

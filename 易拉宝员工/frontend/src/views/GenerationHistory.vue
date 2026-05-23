@@ -122,11 +122,8 @@ const formatDate = (dateStr) => {
 // 下载单张图片
 const downloadSingleImage = async (imageUrl, productName, index) => {
   try {
-    // 使用后端代理下载接口
-    const downloadUrl = `/api/download-image?url=${encodeURIComponent(imageUrl)}`
-
-    // 使用 axios 获取图片数据
-    const response = await axios.get(downloadUrl, {
+    // 直接从图片 URL 下载
+    const response = await axios.get(imageUrl, {
       responseType: 'blob'
     })
 
