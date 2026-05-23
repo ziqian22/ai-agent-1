@@ -214,9 +214,9 @@
         "白色",
         "灰色"
       ],
-      "style": "简约商务",
-      "main_colors": "蓝色+白色",
-      "num_images": 1
+      "style": "具体场景 - 商务办公室（现代商务办公室，简约办公桌，落地窗，城市景观）",
+      "main_colors": "商务蓝+白色",
+      "num_images": 3
     },
     "image_path": "http://localhost:8000/knowledge_base/files/product_20260518_005649/product.png",
     "logo_path": null,
@@ -247,7 +247,149 @@
         ],
         "user_rating": null,
         "created_at": "2026-05-18T01:23:18.721167"
+      },
+      {
+        "style": "具体场景 - 商务办公室（现代商务办公室，简约办公桌，落地窗，城市景观）",
+        "result_files": [
+          "results\\banner_1779098615_0.png",
+          "results\\banner_1779098621_0.png",
+          "results\\banner_1779098628_0.png"
+        ],
+        "user_rating": null,
+        "created_at": "2026-05-18T18:04:52.197734"
       }
     ]
+  },
+  {
+    "id": "product_20260518_040145",
+    "product_info": {
+      "product_name": "智能直饮机HS003",
+      "brand": "朴道健康水专家",
+      "slogan": "简约而不简单，于细节处见真章",
+      "features": [
+        "5级精密过滤",
+        "双温出水",
+        "304不锈钢水箱",
+        "UV紫外杀菌",
+        "一级水效认证",
+        "IOT智能云平台"
+      ],
+      "product_type": "智能直饮机",
+      "scenes": [
+        "中小型办公室",
+        "连锁网点"
+      ],
+      "colors": [
+        "白色",
+        "红色",
+        "蓝色"
+      ],
+      "style": "科技感",
+      "main_colors": "蓝色+白色",
+      "num_images": 2
+    },
+    "image_path": "http://localhost:8000/knowledge_base/files/product_20260518_040145/product.png",
+    "logo_path": null,
+    "created_at": "2026-05-18T04:01:45.730759",
+    "updated_at": "2026-05-18T04:01:45.730759",
+    "generation_history": [
+      {
+        "style": "自然清新",
+        "result_files": [
+          "results\\banner_1779078206_0.png"
+        ],
+        "user_rating": null,
+        "created_at": "2026-05-18T12:25:24.792565"
+      },
+      {
+        "style": "科技感",
+        "result_files": [
+          "results\\banner_1779078715_0.png",
+          "results\\banner_1779078725_0.png"
+        ],
+        "user_rating": null,
+        "created_at": "2026-05-18T12:33:38.257016"
+      }
+    ]
+  },
+  {
+    "id": "product_20260518_165339",
+    "product_info": {
+      "product_name": "勇士E6即开直饮机",
+      "brand": "PUDOW",
+      "slogan": "节能减碳先锋 待机0能耗 开水不间断",
+      "features": [
+        "待机0能耗，节能40%以上",
+        "100℃开水持续出，不间断供应",
+        "非金属加热，更安全健康",
+        "无水箱设计，杜绝千滚水",
+        "过滤式紫外杀菌，杀菌率99.99%",
+        "适用100-150人，大容量商用"
+      ],
+      "product_type": "商用直饮水机",
+      "scenes": [
+        "国宾会",
+        "政府",
+        "事业单位",
+        "机场",
+        "车站"
+      ],
+      "colors": [
+        "黑色",
+        "银灰色",
+        "白色"
+      ],
+      "style": "高端奢华",
+      "main_colors": "金色+黑色",
+      "num_images": 3
+    },
+    "image_path": "http://localhost:8000/knowledge_base/files/product_20260518_165339/product.png",
+    "logo_path": null,
+    "created_at": "2026-05-18T16:53:39.082633",
+    "updated_at": "2026-05-18T16:53:39.082633",
+    "generation_history": [
+      {
+        "style": "高端奢华",
+        "result_files": [
+          "results\\banner_1779096609_0.png"
+        ],
+        "user_rating": null,
+        "created_at": "2026-05-18T17:46:40.881336"
+      }
+    ]
+  },
+  {
+    "id": "product_20260523_102156",
+    "product_info": {
+      "product_name": "Hotspot titanium-4L/8L",
+      "brand": "荷兰",
+      "slogan": "真开水 真体验",
+      "features": [
+        "荷兰原装进口开水器",
+        "内胆加压：即饮高温浓度能100℃沸腾",
+        "纯钛罐体：质保20年不腐蚀",
+        "大流量出水：1分钟12杯老杯水",
+        "分质、分温供水：开水/常温水/温热水",
+        "额定功率2000W",
+        "连续开水20L/H或30L/H"
+      ],
+      "product_type": "开水器/饮水机",
+      "scenes": [
+        "酒店",
+        "餐饮",
+        "企业",
+        "家庭"
+      ],
+      "colors": [
+        "黑色",
+        "银色",
+        "白色"
+      ]
+    },
+    "image_path": "knowledge_base\\files\\product_20260523_102156\\product.png",
+    "logo_path": null,
+    "created_at": "2026-05-23T10:21:56.353628",
+    "updated_at": "2026-05-23T10:21:56.353628",
+    "generation_history": []
   }
 ]

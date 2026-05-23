@@ -187,16 +187,33 @@ class ClaudeConversationHandler:
                     role = "用户" if msg["role"] == "user" else "助手"
                     history_text += f"{role}: {msg['content']}\n"
 
+            # 动态生成风格列表
+            from conversation_state import STYLE_PRESETS
+
+            style_list_text = ""
+            all_styles = []
+            scene_style_info = ""
+            for name, config in STYLE_PRESETS.items():
+                style_list_text += f"- {name}：{config['description']}\n"
+                all_styles.append(name)
+
+                # 如果是"具体场景"风格,添加额外说明
+                if config.get('requires_sub_selection', False):
+                    suggested_scenes = config.get('suggested_scenes', [])
+                    scenes_text = '\n  '.join([f"• {scene}" for scene in suggested_scenes])
+                    scene_style_info = f"""
+**特别注意**："{name}"风格需要用户描述具体场景。
+建议场景：
+  {scenes_text}
+用户也可以自己描述想要的场景环境。"""
+
             prompt = f"""用户正在选择易拉宝的设计风格。
 {history_text}
 用户说："{user_input}"
 
 可用的预设风格：
-- 科技感：现代、智能、清爽
-- 简约商务：高端、克制、精致
-- 自然清新：健康、环保、舒适
-- 时尚活力：活力、年轻、创新
-- 高端奢华：高端、奢华、尊贵
+{style_list_text}
+{scene_style_info}
 
 请分析用户的意图，返回JSON格式：
 
@@ -205,8 +222,8 @@ class ClaudeConversationHandler:
 {{
   "intent": "multi_style",
   "generation_mode": "multi_style",
-  "selected_styles": ["科技感", "简约商务", "自然清新", "时尚活力", "高端奢华"],
-  "response": "好的，我将为您生成5种不同风格的易拉宝"
+  "selected_styles": {all_styles},
+  "response": "好的，我将为您生成{len(all_styles)}种不同风格的易拉宝"
 }}
 
 **情况2：用户指定了多个具体风格**
@@ -267,7 +284,7 @@ class ClaudeConversationHandler:
 }}
 
 **重要规则**：
-1. 如果用户说"各种"、"所有"、"多种"、"不同风格"，就选择所有5种预设风格
+1. 如果用户说"各种"、"所有"、"多种"、"不同风格"，就选择所有{len(all_styles)}种预设风格
 2. 如果用户明确提到具体风格名称，就只选择那些风格
 3. 如果用户只选择一个风格但要求"多张"、"多个方案"，使用 single_style_multi 模式
 4. response 字段必须简短（不超过30字）
@@ -568,3 +585,102 @@ def is_quick_action(user_input: str) -> Optional[str]:
             return action
 
     return None
+
+
+    def understand_scene_description(
+        self,
+        user_input: str,
+        conversation_history: list = None
+    ) -> Dict[str, Any]:
+        """
+        理解用户描述的场景
+
+        Args:
+            user_input: 用户输入的场景描述
+            conversation_history: 对话历史
+
+        Returns:
+            {
+                "scene_name": "场景名称",
+                "scene_description": "详细场景描述",
+                "lighting": "光线描述",
+                "colors": "色彩方案",
+                "atmosphere": "氛围描述"
+            }
+        """
+        try:
+            # 构建对话历史文本
+            history_text = ""
+            if conversation_history:
+                history_text = "\n\n最近的对话：\n"
+                for msg in conversation_history[-5:]:
+                    role = "用户" if msg["role"] == "user" else "助手"
+                    history_text += f"{role}: {msg['content']}\n"
+
+            prompt = f"""用户正在描述易拉宝背景的具体场景。
+{history_text}
+用户描述："{user_input}"
+
+参考场景示例：
+- 商务办公室：现代商务办公室，简约办公桌，落地窗，城市景观
+- 北欧家居：北欧风格客厅，简约家具，绿植点缀，木质地板
+- 温馨家居：温馨家庭厨房或餐厅，暖色调装饰，生活气息
+
+请理解用户的场景描述，生成详细的场景配置，返回JSON格式：
+
+{{
+  "scene_name": "场景名称（简短，如'商务办公室'、'咖啡厅'、'北欧客厅'）",
+  "scene_description": "详细场景描述（包含环境、家具、装饰等具体元素）",
+  "lighting": "光线描述（如'明亮自然光'、'柔和暖光'、'冷色调自然光'）",
+  "colors": "色彩方案（如'灰白色调+木质色'、'白色+原木色+浅灰'）",
+  "atmosphere": "氛围描述（如'专业、高效'、'简约、克制、高级感'、'温馨、舒适'）"
+}}
+
+注意：
+1. 如果用户描述的是"北欧"相关场景，氛围应该是"简约、克制、高级感、舒适"，光线是"柔和自然光"（不是温暖氛围灯）
+2. 场景描述要具体，包含环境特征、家具、装饰等元素
+3. 色彩方案要符合场景特点
+4. 氛围描述要准确反映场景给人的感受
+
+只返回JSON，不要其他内容。"""
+
+            response = self.client.messages.create(
+                model="claude-opus-4-20250514",
+                max_tokens=1000,
+                temperature=0.3,
+                messages=[{
+                    "role": "user",
+                    "content": prompt
+                }]
+            )
+
+            response_text = response.content[0].text.strip()
+
+            # 提取JSON
+            import json
+            import re
+
+            json_match = re.search(r'\{[\s\S]*\}', response_text)
+            if json_match:
+                result = json.loads(json_match.group())
+                return result
+            else:
+                # 解析失败，返回默认配置
+                return {
+                    "scene_name": "自定义场景",
+                    "scene_description": user_input,
+                    "lighting": "柔和自然光",
+                    "colors": "根据场景自然配色",
+                    "atmosphere": "真实、生活化"
+                }
+
+        except Exception as e:
+            print(f"场景理解失败: {str(e)}")
+            # 返回默认配置
+            return {
+                "scene_name": "自定义场景",
+                "scene_description": user_input,
+                "lighting": "柔和自然光",
+                "colors": "根据场景自然配色",
+                "atmosphere": "真实、生活化"
+            }

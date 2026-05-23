@@ -28,22 +28,17 @@
           <div class="message-content">
             <div class="message-text" v-html="formatMessage(msg.content)"></div>
 
-            <!-- 快捷按钮（在消息内部） -->
-            <div v-if="msg.role === 'assistant' && shouldShowConfirmButton(msg.content)" class="quick-actions-inline">
+            <!-- 快捷按钮（使用后端返回的 quick_actions） -->
+            <div v-if="msg.role === 'assistant' && msg.quick_actions && msg.quick_actions.length > 0" class="quick-actions-inline">
               <el-button
-                type="primary"
+                v-for="(action, idx) in msg.quick_actions"
+                :key="idx"
+                :type="action.label.includes('✅') || action.label.includes('确认') ? 'primary' : 'default'"
                 size="default"
-                @click="sendQuickMessage('确认，开始生成')"
+                @click="sendQuickMessage(action.value)"
                 :disabled="loading"
               >
-                ✅ 开始生成
-              </el-button>
-              <el-button
-                size="default"
-                @click="sendQuickMessage('我需要修改信息')"
-                :disabled="loading"
-              >
-                ✏️ 修改信息
+                {{ action.label }}
               </el-button>
             </div>
 
@@ -330,7 +325,8 @@ const sendMessage = async () => {
     messages.value.push({
       role: 'assistant',
       content: response.content,
-      images: response.images
+      images: response.images,
+      quick_actions: response.quick_actions || []  // 保存后端返回的快捷按钮
     })
 
     scrollToBottom()
@@ -361,7 +357,8 @@ const sendQuickMessage = async (message) => {
     messages.value.push({
       role: 'assistant',
       content: response.content,
-      images: response.images
+      images: response.images,
+      quick_actions: response.quick_actions || []  // 保存后端返回的快捷按钮
     })
 
     scrollToBottom()
@@ -370,23 +367,6 @@ const sendQuickMessage = async (message) => {
   } finally {
     loading.value = false
   }
-}
-
-// 判断是否应该显示确认按钮
-const shouldShowConfirmButton = (content) => {
-  if (!content) return false
-
-  // 检查是否包含确认提示的关键词
-  const confirmKeywords = [
-    '请确认以上信息',
-    '确认无误后',
-    '请点击',
-    '开始生成',
-    '信息收集完成',
-    '✅ 信息收集完成'
-  ]
-
-  return confirmKeywords.some(keyword => content.includes(keyword))
 }
 
 // 上传文件并分析
@@ -420,7 +400,8 @@ const uploadFileAndAnalyze = async () => {
     // 添加助手的分析结果到对话
     messages.value.push({
       role: 'assistant',
-      content: response.analysis
+      content: response.analysis,
+      quick_actions: response.quick_actions || []  // 保存后端返回的快捷按钮
     })
 
     // 清除选择

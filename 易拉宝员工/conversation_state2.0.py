@@ -115,7 +115,6 @@ class ConversationContext:
         self.generation_mode: Optional[str] = None  # 生成模式: single_style_multi/multi_style/hybrid
         self.generation_count: int = 5  # 生成数量（默认5张）
         self.selected_styles: List[str] = []  # 多风格模式下选择的风格列表
-        self.pending_style: Optional[str] = None  # 等待场景描述的主风格
 
         # 文档处理相关字段
         self.uploaded_file_type: Optional[str] = None  # 上传的文件类型（image/pdf/word/ppt）
@@ -236,20 +235,6 @@ STYLE_PRESETS = {
         "atmosphere": "高端、奢华、尊贵、品质",
         "icon": "👑",
         "description": "高端、奢华、尊贵"
-    },
-    "具体场景": {
-        "scene": "需要用户描述或选择",
-        "lighting": "根据场景自然配色",
-        "colors": "根据场景自然配色",
-        "atmosphere": "真实、生活化、有代入感",
-        "icon": "🏠",
-        "description": "真实场景、生活化",
-        "requires_sub_selection": True,
-        "suggested_scenes": [
-            "商务办公室：现代商务办公室，简约办公桌，落地窗，城市景观",
-            "北欧家居：北欧风格客厅，简约家具，绿植点缀，木质地板",
-            "温馨家居：温馨家庭厨房或餐厅，暖色调装饰，生活气息"
-        ]
     }
 }
 

@@ -128,7 +128,24 @@ SYSTEM_PROMPT = """你是易拉宝设计助手,一个真正的 AI Agent。
 - 核心卖点/Slogan
 - 产品特点 (3-6个)
 - 适用场景
-- 设计风格 (科技感/简约商务/自然清新/时尚活力/高端奢华)
+- 设计风格：系统提供6种预设风格,**向用户介绍风格时必须列出所有6种**
+  1. 科技感 - 现代、智能、清爽
+  2. 简约商务 - 高端、克制、精致
+  3. 自然清新 - 健康、环保、舒适
+  4. 时尚活力 - 活力、年轻、创新
+  5. 高端奢华 - 高端、奢华、尊贵
+  6. 具体场景 - 真实场景、生活化
+
+  **关于"具体场景"风格**：
+  这是一种真实场景风格,需要用户描述具体的使用场景。
+  建议场景包括:
+  • 商务办公室：现代商务办公室，简约办公桌，落地窗，城市景观
+  • 北欧家居：北欧风格客厅，简约家具，绿植点缀，木质地板
+  • 温馨家居：温馨家庭厨房或餐厅，暖色调装饰，生活气息
+
+  用户也可以自己描述想要的场景环境(如咖啡厅、健身房、户外等)。
+  当用户选择"具体场景"风格时,你需要询问用户想要什么场景,并可以推荐上述3个预设场景。
+
 - 主色调
 
 你的工作方式:
@@ -506,6 +523,11 @@ async def chat(request: ChatRequest):
                 num_images = max(1, min(10, num_images))
 
                 # 调用生成 API
+                print(f"[DEBUG] 开始生成易拉宝:")
+                print(f"  - 产品图片: {product_image}")
+                print(f"  - 生成数量: {num_images}")
+                print(f"  - 提示词长度: {len(prompt)} 字符")
+
                 result = await banner_generator.generate_complete_flow(
                     product_image_path=product_image,
                     prompt=prompt,
@@ -516,6 +538,8 @@ async def chat(request: ChatRequest):
                     resolution="2k",
                     num_images=num_images
                 )
+
+                print(f"[DEBUG] 生成结果: success={result.get('success')}, error={result.get('error')}")
 
                 if result["success"]:
                     # 转换本地文件路径为 URL
@@ -644,9 +668,12 @@ async def chat(request: ChatRequest):
                         images=final_image_urls
                     )
                 else:
+                    error_detail = result.get("error", "未知错误")
+                    print(f"[ERROR] 生成失败: {error_detail}")
+
                     return ChatResponse(
                         type="message",
-                        content=f"生成失败：{result.get('error', '未知错误')}"
+                        content=f"生成失败：{error_detail}\n\n可能的原因:\n1. API 配额不足\n2. 网络连接问题\n3. 图片处理失败\n\n请检查后台日志获取详细信息。"
                     )
 
             except json.JSONDecodeError as e:
@@ -861,14 +888,18 @@ async def use_product(product_id: str):
             image_path = image_path.split("localhost:8000/")[-1]
             print(f"[DEBUG] 从 URL 提取路径: {image_path}")
 
-        # 转换为绝对路径
+        # 转换为绝对路径（使用后端目录作为基准）
+        backend_dir = Path(__file__).parent
         image_path_obj = Path(image_path)
         if not image_path_obj.is_absolute():
-            image_path = str(Path.cwd() / image_path)
+            # 相对路径，基于后端目录解析
+            image_path = str(backend_dir / image_path)
 
         # 检查文件是否存在
         if not Path(image_path).exists():
             print(f"[ERROR] 产品图片不存在: {image_path}")
+            print(f"[DEBUG] 后端目录: {backend_dir}")
+            print(f"[DEBUG] 原始路径: {product.get('image_path')}")
             raise HTTPException(status_code=404, detail=f"产品图片不存在: {image_path}")
 
         print(f"[DEBUG] 产品图片路径: {image_path}")
@@ -981,10 +1012,11 @@ async def download_image(url: str):
         else:
             file_path = url
 
-        # 转换为绝对路径
+        # 转换为绝对路径（使用后端目录作为基准）
+        backend_dir = Path(__file__).parent
         full_path = Path(file_path)
         if not full_path.is_absolute():
-            full_path = Path.cwd() / file_path
+            full_path = backend_dir / file_path
 
         # 检查文件是否存在
         if not full_path.exists():

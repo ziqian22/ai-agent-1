@@ -362,7 +362,7 @@ class BannerGenerator:
 
                 if not result:
                     if progress_callback:
-                        progress_callback(f"⚠️ 查询任务状态失败，重试中...")
+                        progress_callback(f"[WARNING] 查询任务状态失败，重试中...")
                     time.sleep(3)
                     continue
 
@@ -379,13 +379,13 @@ class BannerGenerator:
 
                 if status == 'SUCCESS':
                     if progress_callback:
-                        progress_callback(f"✅ {task_name}完成！(耗时 {elapsed}秒)")
+                        progress_callback(f"[OK] {task_name}完成！(耗时 {elapsed}秒)")
                     return result
 
                 elif status == 'FAILED':
                     error_msg = result.get('errorMessage', '未知错误')
                     if progress_callback:
-                        progress_callback(f"❌ {task_name}失败: {error_msg}")
+                        progress_callback(f"[ERROR] {task_name}失败: {error_msg}")
                     return result
 
                 # 根据已等待时间调整检查间隔
@@ -400,11 +400,11 @@ class BannerGenerator:
 
             except Exception as e:
                 if progress_callback:
-                    progress_callback(f"⚠️ 检查状态出错: {str(e)}")
+                    progress_callback(f"[WARNING] 检查状态出错: {str(e)}")
                 time.sleep(5)
 
         if progress_callback:
-            progress_callback(f"⏱️ {task_name}超时 (超过{max_wait}秒)")
+            progress_callback(f"[TIMEOUT] {task_name}超时 (超过{max_wait}秒)")
 
         return None
 
@@ -506,51 +506,72 @@ class BannerGenerator:
             file_name, download_url = upload_result
 
             # 2. 抠图（可选）
-            final_image_path = product_image_path
+            final_image_url = download_url  # 默认使用原图 URL
             if enable_cutout:
+                if progress_callback:
+                    progress_callback("开始抠图处理...")
                 cutout_path = self.cutout_product(file_name, cutout_prompt, progress_callback)
                 if cutout_path:
-                    final_image_path = cutout_path
-
-            # 3. 合成Logo（可选）
-            if logo_path and Path(logo_path).exists():
-                composed_path = self.compose_with_logo(final_image_path, logo_path, progress_callback)
-                if composed_path:
-                    # 上传合成后的图片
+                    # 抠图成功，重新上传抠图结果
                     if progress_callback:
-                        progress_callback("上传合成后的图片...")
-
-                    upload_result = self.upload_image(composed_path)
-                    if upload_result:
-                        _, image_url = upload_result
+                        progress_callback("上传抠图结果...")
+                    cutout_upload = self.upload_image(cutout_path)
+                    if cutout_upload:
+                        _, final_image_url = cutout_upload
+                        if progress_callback:
+                            progress_callback("[OK] 抠图完成并已上传")
                     else:
-                        image_url = download_url
+                        if progress_callback:
+                            progress_callback("[WARNING] 抠图结果上传失败，使用原图")
                 else:
-                    image_url = download_url
-            else:
-                image_url = download_url
+                    if progress_callback:
+                        progress_callback("[WARNING] 抠图失败，使用原图")
+
+            # 3. 合成Logo（可选）- 跳过，直接使用抠图后的 URL
+            image_url = final_image_url
+
+            if progress_callback:
+                progress_callback(f"[OK] 准备就绪，使用图片 URL: {image_url[:50]}...")
 
             # 4. 并发生成多张易拉宝
             if progress_callback:
                 progress_callback(f"开始生成 {num_images} 张易拉宝...")
 
-            # 同时提交多个任务
-            task_ids = []
+            # 生成提示词变体
+            variant_prompts = []
             for i in range(num_images):
-                task_id = self.generate_banner(image_url, prompt, aspect_ratio, resolution, None)
+                variant_suffix = f"\n\n设计变体{i+1}: 在保持整体风格的基础上，探索不同的布局细节、色彩搭配和艺术元素设计。"
+                variant_prompts.append(prompt + variant_suffix)
+
+            # 同时提交多个任务（使用不同的提示词变体）
+            task_ids = []
+            for i, variant_prompt in enumerate(variant_prompts):
+                if progress_callback:
+                    progress_callback(f"正在提交任务 {i+1}/{num_images}...")
+
+                task_id = self.generate_banner(image_url, variant_prompt, aspect_ratio, resolution, progress_callback)
+
                 if task_id:
                     task_ids.append(task_id)
                     if progress_callback:
-                        progress_callback(f"已提交任务 {i+1}/{num_images}: {task_id}")
+                        progress_callback(f"[OK] 任务 {i+1} 已提交: {task_id}")
+                else:
+                    if progress_callback:
+                        progress_callback(f"[ERROR] 任务 {i+1} 提交失败")
 
             if not task_ids:
-                return {"success": False, "error": "所有生成任务提交失败"}
+                error_msg = "所有生成任务提交失败 - 请检查 API 配额和网络连接"
+                if progress_callback:
+                    progress_callback(f"[ERROR] {error_msg}")
+                return {"success": False, "error": error_msg}
 
             # 5. 并行等待所有任务完成
             all_result_files = []
+            failed_tasks = []
+
             for idx, task_id in enumerate(task_ids):
                 if progress_callback:
-                    progress_callback(f"等待任务 {idx+1}/{len(task_ids)} 完成...")
+                    progress_callback(f"[WAIT] 等待任务 {idx+1}/{len(task_ids)} 完成...")
 
                 result = self._wait_for_completion(
                     task_id,
@@ -562,13 +583,31 @@ class BannerGenerator:
                     # 6. 下载结果
                     result_files = self.download_results(result, progress_callback)
                     all_result_files.extend(result_files)
-                else:
                     if progress_callback:
-                        error_msg = result.get('errorMessage', '未知错误') if result else '任务超时'
-                        progress_callback(f"⚠️ 任务 {idx+1} 失败: {error_msg}")
+                        progress_callback(f"[OK] 任务 {idx+1} 完成，下载了 {len(result_files)} 个文件")
+                else:
+                    error_msg = result.get('errorMessage', '未知错误') if result else '任务超时'
+                    error_code = result.get('errorCode', '') if result else ''
+                    failed_tasks.append({
+                        "task_id": task_id,
+                        "error_code": error_code,
+                        "error_msg": error_msg
+                    })
+                    if progress_callback:
+                        progress_callback(f"[ERROR] 任务 {idx+1} 失败 [错误码: {error_code}]: {error_msg}")
 
             if not all_result_files:
-                return {"success": False, "error": "所有生成任务都失败了"}
+                # 构建详细的错误信息
+                error_details = []
+                for failed in failed_tasks:
+                    error_details.append(f"任务 {failed['task_id'][:8]}... 失败: [{failed['error_code']}] {failed['error_msg']}")
+
+                error_msg = f"所有生成任务都失败了。详细信息:\n" + "\n".join(error_details)
+
+                if progress_callback:
+                    progress_callback(f"[ERROR] {error_msg}")
+
+                return {"success": False, "error": error_msg}
 
             return {
                 "success": True,

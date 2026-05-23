@@ -540,32 +540,42 @@ class BannerAgent:
             # 单一风格模式，直接进入意图确认
             self.context.state = ConversationState.CONFIRM_INTENT
 
-            return {
-                "message": f"已选择：单一风格生成5张设计变体\n\n{self._get_intent_confirmation_message()}",
-                "state": self.context.state.value,
-                "quick_actions": [
+            # 检查是否可以显示生成按钮
+            quick_actions = []
+            if self._is_ready_to_generate():
+                quick_actions = [
                     {"label": "✅ 确认生成", "value": "confirm"},
                     {"label": "✏️ 修改参数", "value": "edit"}
                 ]
+
+            return {
+                "message": f"已选择：单一风格生成5张设计变体\n\n{self._get_intent_confirmation_message()}",
+                "state": self.context.state.value,
+                "quick_actions": quick_actions
             }
 
         # 如果用户尝试选择多风格或混合模式，给出提示
         if user_input in ["multi_style", "hybrid"]:
+            styles_text = self._get_style_list_text()
+
             return {
-                "message": "抱歉，系统目前不支持一次生成多种风格。\n\n为了保证每种风格的质量和特色，建议您：\n1. 每次选择一个风格生成5张设计方案\n2. 对比不同方案后，如需尝试其他风格，可以重新选择\n\n请选择您想要的风格：",
+                "message": f"""抱歉，系统目前不支持一次生成多种风格。
+
+为了保证每种风格的质量和特色，建议您：
+1. 每次选择一个风格生成5张设计方案
+2. 对比不同方案后，如需尝试其他风格，可以重新选择
+
+可选风格：
+{styles_text}
+
+请选择您想要的风格：""",
                 "state": self.context.state.value,
                 "quick_actions": [
                     {"label": f"{config['icon']} {name}", "value": name}
                     for name, config in STYLE_PRESETS.items()
                 ]
             }
-                     "value": f"style_{name}"}
-                    for name, config in STYLE_PRESETS.items()
-                ] + [
-                    {"label": "✅ 完成选择", "value": "finish_style_selection"}
-                ],
-                "multi_style_selection": True
-            }
+
 
         # 检查是否是快捷按钮（预设风格）
         quick_action = is_quick_action(user_input)
@@ -574,9 +584,31 @@ class BannerAgent:
         style_config = get_style_preset(user_input) or get_style_preset(quick_action) if quick_action else None
 
         if style_config:
-            # 保存风格配置
+            # 检查是否需要场景描述
+            if style_config.get('requires_sub_selection', False):
+                # 保存主风格，等待场景描述
+                self.context.pending_style = user_input if not quick_action else quick_action
+                self.context.state = ConversationState.COLLECT_STYLE  # 保持在风格选择状态
+
+                suggested_scenes = style_config.get('suggested_scenes', [])
+                scenes_text = '\n'.join([f"- {scene}" for scene in suggested_scenes])
+
+                return {
+                    "message": f"""您选择了「{self.context.pending_style}」风格。
+
+请描述您想要的具体场景，例如：
+
+{scenes_text}
+
+您也可以自己描述想要的场景环境。""",
+                    "state": self.context.state.value,
+                    "quick_actions": []  # 不提供按钮，让用户自由输入
+                }
+
+            # 普通风格，直接保存
             self.context.update_style_config({
                 "name": user_input if not quick_action else quick_action,
+                "is_scene_style": False,
                 **style_config
             })
 
@@ -587,16 +619,61 @@ class BannerAgent:
             # 切换到意图确认状态
             self.context.state = ConversationState.CONFIRM_INTENT
 
-            return {
-                "message": f"已选择风格：{user_input if not quick_action else quick_action}\n\n将为您生成5张同风格但设计细节不同的易拉宝。\n\n{self._get_intent_confirmation_message()}",
-                "state": self.context.state.value,
-                "quick_actions": [
+            # 检查是否可以显示生成按钮
+            quick_actions = []
+            if self._is_ready_to_generate():
+                quick_actions = [
                     {"label": "✅ 确认生成", "value": "confirm"},
                     {"label": "✏️ 修改风格", "value": "edit"}
                 ]
+
+            return {
+                "message": f"已选择风格：{user_input if not quick_action else quick_action}\n\n将为您生成5张同风格但设计细节不同的易拉宝。\n\n{self._get_intent_confirmation_message()}",
+                "state": self.context.state.value,
+                "quick_actions": quick_actions
             }
 
         else:
+            # 检查是否是场景描述（用户在pending_style状态下的输入）
+            if self.context.pending_style == "具体场景":
+                # 使用Claude理解用户的场景描述
+                scene_understanding = self.conversation_handler.understand_scene_description(
+                    user_input,
+                    self.context.conversation_history
+                )
+
+                # 生成场景配置
+                self.context.update_style_config({
+                    "name": f"具体场景 - {scene_understanding.get('scene_name', '自定义')}",
+                    "is_scene_style": True,
+                    "scene": scene_understanding.get('scene_description'),
+                    "lighting": scene_understanding.get('lighting'),
+                    "colors": scene_understanding.get('colors'),
+                    "atmosphere": scene_understanding.get('atmosphere')
+                })
+
+                # 清除临时状态
+                self.context.pending_style = None
+
+                # 继续到意图确认
+                self.context.generation_mode = "single_style_multi"
+                self.context.generation_count = 5
+                self.context.state = ConversationState.CONFIRM_INTENT
+
+                # 检查是否可以显示生成按钮
+                quick_actions = []
+                if self._is_ready_to_generate():
+                    quick_actions = [
+                        {"label": "✅ 确认生成", "value": "confirm"},
+                        {"label": "✏️ 修改场景", "value": "edit"}
+                    ]
+
+                return {
+                    "message": f"已理解您的场景需求：{scene_understanding.get('scene_name')}\n\n{self._get_intent_confirmation_message()}",
+                    "state": self.context.state.value,
+                    "quick_actions": quick_actions
+                }
+
             # 自由输入，使用Claude理解风格意图
             result = self.conversation_handler.understand_style_intent(
                 user_input,
@@ -609,7 +686,20 @@ class BannerAgent:
 
             if intent == "multi_style":
                 # 用户想要多风格生成 - 给出提示
-                response_message = "抱歉，系统目前不支持一次生成多种风格。\n\n为了保证每种风格的质量和特色，建议您：\n1. 每次选择一个风格生成5张设计方案\n2. 对比不同方案后，如需尝试其他风格，可以重新选择\n\n这样可以确保每种风格都有明显的特色和足够的设计变化。\n\n请选择您想要的风格："
+                styles_text = self._get_style_list_text()
+
+                response_message = f"""抱歉，系统目前不支持一次生成多种风格。
+
+为了保证每种风格的质量和特色，建议您：
+1. 每次选择一个风格生成5张设计方案
+2. 对比不同方案后，如需尝试其他风格，可以重新选择
+
+这样可以确保每种风格都有明显的特色和足够的设计变化。
+
+可选风格：
+{styles_text}
+
+请选择您想要的风格："""
                 self.context.add_conversation("assistant", response_message)
 
                 return {
@@ -634,13 +724,18 @@ class BannerAgent:
                 response_message = f"{result.get('response', '好的')}\n\n{self._get_intent_confirmation_message()}"
                 self.context.add_conversation("assistant", response_message)
 
-                return {
-                    "message": response_message,
-                    "state": self.context.state.value,
-                    "quick_actions": [
+                # 检查是否可以显示生成按钮
+                quick_actions = []
+                if self._is_ready_to_generate():
+                    quick_actions = [
                         {"label": "✅ 确认生成", "value": "confirm"},
                         {"label": "✏️ 修改参数", "value": "edit"}
                     ]
+
+                return {
+                    "message": response_message,
+                    "state": self.context.state.value,
+                    "quick_actions": quick_actions
                 }
 
             elif intent == "single_style" and generation_mode == "ask_user":
@@ -675,18 +770,30 @@ class BannerAgent:
                 response_message = f"{result.get('response', '已设置自定义风格')}\n\n{self._get_intent_confirmation_message()}"
                 self.context.add_conversation("assistant", response_message)
 
-                return {
-                    "message": response_message,
-                    "state": self.context.state.value,
-                    "quick_actions": [
+                # 检查是否可以显示生成按钮
+                quick_actions = []
+                if self._is_ready_to_generate():
+                    quick_actions = [
                         {"label": "✅ 确认生成", "value": "confirm"},
                         {"label": "✏️ 修改风格", "value": "edit"}
                     ]
+
+                return {
+                    "message": response_message,
+                    "state": self.context.state.value,
+                    "quick_actions": quick_actions
                 }
 
             else:
                 # 无法理解用户意图
-                response_message = result.get("response", "请选择一个风格或描述您想要的风格。")
+                styles_text = self._get_style_list_text()
+
+                response_message = f"""抱歉，我没有理解您的意图。
+
+可选风格：
+{styles_text}
+
+请选择一个风格或描述您想要的风格。"""
                 self.context.add_conversation("assistant", response_message)
 
                 return {
@@ -717,8 +824,13 @@ class BannerAgent:
                 # 返回风格选择状态
                 self.context.state = ConversationState.COLLECT_STYLE
 
+                styles_text = self._get_style_list_text()
+
                 return {
-                    "message": "好的，请重新选择设计风格：",
+                    "message": f"""好的，请重新选择设计风格：
+
+可选风格：
+{styles_text}""",
                     "state": self.context.state.value,
                     "quick_actions": [
                         {"label": f"{config['icon']} {name}", "value": name}
@@ -754,26 +866,36 @@ class BannerAgent:
                 count = int(user_input_lower.split("_")[1])
                 self.context.num_images = count
 
-                return {
-                    "message": f"已设置生成数量为 {count} 张。\n\n" + self._get_intent_confirmation_message(),
-                    "state": self.context.state.value,
-                    "quick_actions": [
+                # 检查是否可以显示生成按钮
+                quick_actions = []
+                if self._is_ready_to_generate():
+                    quick_actions = [
                         {"label": "✅ 确认生成", "value": "confirm"},
                         {"label": "✏️ 修改参数", "value": "edit"}
                     ]
+
+                return {
+                    "message": f"已设置生成数量为 {count} 张。\n\n" + self._get_intent_confirmation_message(),
+                    "state": self.context.state.value,
+                    "quick_actions": quick_actions
                 }
             except:
                 pass
 
         else:
             # 其他输入，提示用户
-            return {
-                "message": '请回复"确认"开始生成，或告诉我需要修改的地方。',
-                "state": self.context.state.value,
-                "quick_actions": [
+            # 检查是否可以显示生成按钮
+            quick_actions = []
+            if self._is_ready_to_generate():
+                quick_actions = [
                     {"label": "✅ 确认生成", "value": "confirm"},
                     {"label": "✏️ 修改参数", "value": "edit"}
                 ]
+
+            return {
+                "message": '请回复"确认"开始生成，或告诉我需要修改的地方。',
+                "state": self.context.state.value,
+                "quick_actions": quick_actions
             }
 
     async def _start_generation(self) -> Dict[str, Any]:
@@ -784,16 +906,18 @@ class BannerAgent:
             product_info = self.context.product_info
             image_path = self.context.uploaded_files[0]
 
-            # 固定使用朴道 Logo
-            fixed_logo_path = r"C:\Users\suizi\Desktop\易拉宝员工\朴道logo\PUDOW朴道健康水专家-原色.png"
+            # 固定使用朴道 Logo（使用相对路径）
+            from pathlib import Path
+            script_dir = Path(__file__).parent
+            fixed_logo_path = script_dir / "朴道logo" / "PUDOW朴道健康水专家-原色.png"
 
             # 检查 Logo 文件是否存在
-            from pathlib import Path
-            if not Path(fixed_logo_path).exists():
-                self.progress_tracker.add_log(f"⚠️ Logo 文件不存在: {fixed_logo_path}")
+            if not fixed_logo_path.exists():
+                self.progress_tracker.add_log(f"[WARNING] Logo 文件不存在: {fixed_logo_path}")
                 fixed_logo_path = None
             else:
-                self.progress_tracker.add_log(f"✅ 使用固定 Logo: {fixed_logo_path}")
+                self.progress_tracker.add_log(f"[OK] 使用固定 Logo: {fixed_logo_path}")
+                fixed_logo_path = str(fixed_logo_path)
 
             # 进度回调函数
             def progress_callback(message: str):
@@ -922,9 +1046,9 @@ class BannerAgent:
                         logo_path=self.context.logo_path
                     )
                     self.context.current_product_id = product_id
-                    self.progress_tracker.add_log(f"✅ 已保存到知识库: {product_id}")
+                    self.progress_tracker.add_log(f"[OK] 已保存到知识库: {product_id}")
                 except Exception as e:
-                    self.progress_tracker.add_log(f"⚠️ 保存到知识库失败: {str(e)}", "warning")
+                    self.progress_tracker.add_log(f"[WARNING] 保存到知识库失败: {str(e)}", "warning")
 
             # 保存到知识库历史记录
             if self.knowledge_base and self.context.current_product_id:
@@ -970,16 +1094,18 @@ class BannerAgent:
         try:
             self.progress_tracker.start_step(TaskStep.GENERATE_PROMPT)
 
-            # 固定使用朴道 Logo
-            fixed_logo_path = r"C:\Users\suizi\Desktop\易拉宝员工\朴道logo\PUDOW朴道健康水专家-原色.png"
+            # 固定使用朴道 Logo（使用相对路径）
+            from pathlib import Path
+            script_dir = Path(__file__).parent
+            fixed_logo_path = script_dir / "朴道logo" / "PUDOW朴道健康水专家-原色.png"
 
             # 检查 Logo 文件是否存在
-            from pathlib import Path
-            if not Path(fixed_logo_path).exists():
-                self.progress_tracker.add_log(f"⚠️ Logo 文件不存在: {fixed_logo_path}")
+            if not fixed_logo_path.exists():
+                self.progress_tracker.add_log(f"[WARNING] Logo 文件不存在: {fixed_logo_path}")
                 fixed_logo_path = None
             else:
-                self.progress_tracker.add_log(f"✅ 使用固定 Logo: {fixed_logo_path}")
+                self.progress_tracker.add_log(f"[OK] 使用固定 Logo: {fixed_logo_path}")
+                fixed_logo_path = str(fixed_logo_path)
 
             # 生成提示词
             product_info = self.context.product_info
@@ -1157,21 +1283,34 @@ class BannerAgent:
         elif quick_action == "retry":
             # 重试生成
             self.context.state = ConversationState.CONFIRM_INTENT
-            return {
-                "message": "好的，让我们重试生成。\n\n" + self._get_intent_confirmation_message(),
-                "state": self.context.state.value,
-                "quick_actions": [
+
+            # 检查是否可以显示生成按钮
+            quick_actions = []
+            if self._is_ready_to_generate():
+                quick_actions = [
                     {"label": "✅ 确认生成", "value": "confirm"},
                     {"label": "✏️ 修改参数", "value": "edit"}
                 ]
+
+            return {
+                "message": "好的，让我们重试生成。\n\n" + self._get_intent_confirmation_message(),
+                "state": self.context.state.value,
+                "quick_actions": quick_actions
             }
 
         elif quick_action == "regenerate":
             # 用户要求重新生成
             self.context.state = ConversationState.COLLECT_STYLE
 
+            styles_text = self._get_style_list_text()
+
             return {
-                "message": "好的，让我们重新选择风格。您想要什么样的风格？",
+                "message": f"""好的，让我们重新选择风格。
+
+可选风格：
+{styles_text}
+
+请选择您想要的风格：""",
                 "state": self.context.state.value,
                 "quick_actions": [
                     {"label": f"{config['icon']} {name}", "value": name}
@@ -1268,8 +1407,15 @@ class BannerAgent:
             # 用户要求重新生成，返回风格选择
             self.context.state = ConversationState.COLLECT_STYLE
 
+            styles_text = self._get_style_list_text()
+
             return {
-                "message": "好的，让我们重新选择风格。您想要什么样的风格？",
+                "message": f"""好的，让我们重新选择风格。
+
+可选风格：
+{styles_text}
+
+请选择您想要的风格：""",
                 "state": self.context.state.value,
                 "quick_actions": [
                     {"label": f"{config['icon']} {name}", "value": name}
@@ -1370,9 +1516,31 @@ class BannerAgent:
 
         return "\n".join(lines)
 
+    def _get_style_list_text(self) -> str:
+        """生成风格列表文本"""
+        style_list = []
+        for i, (name, config) in enumerate(STYLE_PRESETS.items(), 1):
+            style_desc = f"{i}. {config['icon']} **{name}**: {config['description']}"
+
+            # 如果是"具体场景"风格,添加预设场景说明
+            if config.get('requires_sub_selection', False):
+                suggested_scenes = config.get('suggested_scenes', [])
+                if suggested_scenes:
+                    scenes_text = '\n   '.join([f"• {scene}" for scene in suggested_scenes])
+                    style_desc += f"\n   预设场景：\n   {scenes_text}\n   （您也可以自己描述想要的场景）"
+
+            style_list.append(style_desc)
+
+        return '\n'.join(style_list)
+
     def _get_style_selection_message(self) -> str:
         """获取风格选择消息"""
-        return """好的！现在请选择易拉宝的设计风格：
+        styles_text = self._get_style_list_text()
+
+        return f"""好的！现在请选择易拉宝的设计风格：
+
+可选风格：
+{styles_text}
 
 ⚠️ 请选择：
 1. 您希望生成什么风格的易拉宝？
@@ -1402,6 +1570,32 @@ class BannerAgent:
 3. 确认无误后，我将开始生成，预计需要1-2分钟。
 
 请回复"确认"开始生成，或告诉我需要修改的地方。"""
+
+    def _is_ready_to_generate(self) -> bool:
+        """检查是否已收集齐所有必要信息，可以显示"开始生成"按钮"""
+        # 必须有产品信息
+        if not self.context.product_info:
+            return False
+
+        # 必须有产品名称和品牌
+        product_info = self.context.product_info
+        if not product_info.get('product_name') or not product_info.get('brand'):
+            return False
+
+        # 必须有风格配置
+        if not self.context.style_config:
+            return False
+
+        # 风格配置必须包含基本信息
+        style_config = self.context.style_config
+        if not style_config.get('colors') or not style_config.get('atmosphere'):
+            return False
+
+        # 必须有上传的文件
+        if not self.context.uploaded_files:
+            return False
+
+        return True
 
     def reset(self):
         """重置Agent状态"""
