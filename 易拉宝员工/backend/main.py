@@ -1321,15 +1321,3 @@ async def compose_logo(request: ComposeLogoRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"合成失败: {str(e)}")
-
-
-if __name__ == "__main__":
-    import uvicorn
-    import os
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=int(os.getenv("PORT", 8080)),
-        timeout_keep_alive=900,  # 15分钟 - 保持连接活跃时间
-        timeout_graceful_shutdown=30  # 30秒 - 优雅关闭超时
-    )
