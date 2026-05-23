@@ -20,8 +20,6 @@ ENV/
 results/
 temp_uploads/
 knowledge_base/*.db
-logo_library/*.png
-logo_library/*.jpg
 generation_history.json
 
 # Node
