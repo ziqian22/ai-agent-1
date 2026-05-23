@@ -886,9 +886,13 @@ async def use_product(product_id: str):
 
         # 如果路径是 URL 格式，提取本地路径部分
         if image_path.startswith("http://") or image_path.startswith("https://"):
-            # URL 格式: http://localhost:8000/knowledge_base/files/product_xxx/product.png
+            # 从完整 URL 中提取路径部分
+            # URL 格式: https://domain.com/knowledge_base/files/product_xxx/product.png
             # 提取: knowledge_base/files/product_xxx/product.png
-            image_path = image_path.split("localhost:8000/")[-1]
+            if "://" in image_path:
+                image_path = image_path.split("://", 1)[1]  # 移除协议
+                if "/" in image_path:
+                    image_path = image_path.split("/", 1)[1]  # 移除域名
             print(f"[DEBUG] 从 URL 提取路径: {image_path}")
 
         # 转换为绝对路径（使用后端目录作为基准）
@@ -1009,9 +1013,18 @@ async def download_image(url: str):
     """下载图片（代理下载，解决跨域问题）"""
     try:
         # 从 URL 中提取本地文件路径
-        # URL 格式: http://localhost:8000/results/banner_xxx.png
-        if url.startswith("http://localhost:8000/"):
-            file_path = url.replace("http://localhost:8000/", "")
+        if url.startswith(BASE_URL + "/"):
+            file_path = url.replace(BASE_URL + "/", "")
+        elif url.startswith("http://") or url.startswith("https://"):
+            # 从任何 URL 中提取路径
+            if "://" in url:
+                url_without_protocol = url.split("://", 1)[1]
+                if "/" in url_without_protocol:
+                    file_path = url_without_protocol.split("/", 1)[1]
+                else:
+                    file_path = url
+            else:
+                file_path = url
         else:
             file_path = url
 
@@ -1073,8 +1086,18 @@ async def analyze_banners_for_logo(request: AnalyzeBannersRequest):
         # 为每张易拉宝分析并推荐 Logo
         for banner_url in banner_urls:
             # 下载易拉宝图片
-            if banner_url.startswith("http://localhost:8000/"):
-                file_path = banner_url.replace("http://localhost:8000/", "")
+            if banner_url.startswith(BASE_URL + "/"):
+                file_path = banner_url.replace(BASE_URL + "/", "")
+            elif banner_url.startswith("http://") or banner_url.startswith("https://"):
+                # 从任何 URL 中提取路径
+                if "://" in banner_url:
+                    url_without_protocol = banner_url.split("://", 1)[1]
+                    if "/" in url_without_protocol:
+                        file_path = url_without_protocol.split("/", 1)[1]
+                    else:
+                        file_path = banner_url
+                else:
+                    file_path = banner_url
             else:
                 file_path = banner_url
 
@@ -1219,8 +1242,18 @@ async def compose_logo(request: ComposeLogoRequest):
         size_ratio = request.size_ratio
 
         # 获取易拉宝文件路径
-        if banner_url.startswith("http://localhost:8000/"):
-            banner_path = banner_url.replace("http://localhost:8000/", "")
+        if banner_url.startswith(BASE_URL + "/"):
+            banner_path = banner_url.replace(BASE_URL + "/", "")
+        elif banner_url.startswith("http://") or banner_url.startswith("https://"):
+            # 从任何 URL 中提取路径
+            if "://" in banner_url:
+                url_without_protocol = banner_url.split("://", 1)[1]
+                if "/" in url_without_protocol:
+                    banner_path = url_without_protocol.split("/", 1)[1]
+                else:
+                    banner_path = banner_url
+            else:
+                banner_path = banner_url
         else:
             banner_path = banner_url
 
@@ -1272,7 +1305,7 @@ async def compose_logo(request: ComposeLogoRequest):
         banner.save(str(output_path), "PNG")
 
         # 返回最终图片 URL
-        final_url = f"http://localhost:8000/results/{output_filename}"
+        final_url = f"{BASE_URL}/results/{output_filename}"
 
         return {
             "final_url": final_url,
