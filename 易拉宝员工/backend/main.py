@@ -59,6 +59,9 @@ app.mount("/logo_library", StaticFiles(directory=str(logo_library_dir)), name="l
 from dotenv import load_dotenv
 load_dotenv()
 
+# 获取当前域名（用于生成图片 URL）
+BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
+
 # 初始化客户端
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
 CLAUDE_BASE_URL = os.getenv("CLAUDE_BASE_URL")
@@ -128,7 +131,7 @@ SYSTEM_PROMPT = """你是易拉宝设计助手,一个真正的 AI Agent。
 - 核心卖点/Slogan
 - 产品特点 (3-6个)
 - 适用场景
-- 设计风格：系统提供6种预设风格,**向用户介绍风格时必须列出所有6种**
+- 设计风格：系统总共提供6种预设风格,**向用户介绍风格时必须列出所有6种**
   1. 科技感 - 现代、智能、清爽
   2. 简约商务 - 高端、克制、精致
   3. 自然清新 - 健康、环保、舒适
@@ -570,7 +573,7 @@ async def chat(request: ChatRequest):
                                 # 如果 Logo 不存在，所有图片都使用原图
                                 for file_path in result_files:
                                     file_name = Path(file_path).name
-                                    image_url = f"http://localhost:8000/results/{file_name}"
+                                    image_url = f"{BASE_URL}/results/{file_name}"
                                     final_image_urls.append(image_url)
                             else:
                                 logo_path = logo_library.get_logo_path(recommended_logo_id)
@@ -610,14 +613,14 @@ async def chat(request: ChatRequest):
 
                                         # 生成 URL
                                         file_name = Path(file_path).name
-                                        image_url = f"http://localhost:8000/results/{file_name}"
+                                        image_url = f"{BASE_URL}/results/{file_name}"
                                         final_image_urls.append(image_url)
 
                                     except Exception as e:
                                         print(f"[ERROR] 为易拉宝 {idx+1} 添加 Logo 失败: {str(e)}")
                                         # 如果失败，使用原图
                                         file_name = Path(file_path).name
-                                        image_url = f"http://localhost:8000/results/{file_name}"
+                                        image_url = f"{BASE_URL}/results/{file_name}"
                                         final_image_urls.append(image_url)
 
                         except Exception as e:
@@ -625,7 +628,7 @@ async def chat(request: ChatRequest):
                             # 如果分析失败，所有图片都使用原图
                             for file_path in result_files:
                                 file_name = Path(file_path).name
-                                image_url = f"http://localhost:8000/results/{file_name}"
+                                image_url = f"{BASE_URL}/results/{file_name}"
                                 final_image_urls.append(image_url)
 
                     print(f"[INFO] ✅ 所有易拉宝 Logo 添加完成")
@@ -736,7 +739,7 @@ async def get_products():
                 if not image_path.startswith("http://") and not image_path.startswith("https://"):
                     # 将反斜杠转换为正斜杠
                     image_path = image_path.replace("\\", "/")
-                    product["image_path"] = f"http://localhost:8000/{image_path}"
+                    product["image_path"] = f"{BASE_URL}/{image_path}"
 
             if product.get("logo_path"):
                 logo_path = product["logo_path"]
@@ -744,7 +747,7 @@ async def get_products():
                 if not logo_path.startswith("http://") and not logo_path.startswith("https://"):
                     # 将反斜杠转换为正斜杠
                     logo_path = logo_path.replace("\\", "/")
-                    product["logo_path"] = f"http://localhost:8000/{logo_path}"
+                    product["logo_path"] = f"{BASE_URL}/{logo_path}"
 
         return {"products": products}
     except Exception as e:
