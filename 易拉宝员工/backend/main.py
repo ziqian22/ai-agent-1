@@ -1329,7 +1329,7 @@ if __name__ == "__main__":
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=int(os.getenv("PORT", 8000)),
+        port=int(os.getenv("PORT", 8080)),
         timeout_keep_alive=900,  # 15分钟 - 保持连接活跃时间
         timeout_graceful_shutdown=30  # 30秒 - 优雅关闭超时
     )
