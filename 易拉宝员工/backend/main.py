@@ -60,7 +60,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 获取当前域名（用于生成图片 URL）
-BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
+BASE_URL = os.getenv("BASE_URL", "https://ai-agent-1-production-4014.up.railway.app")
 
 # 初始化客户端
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
