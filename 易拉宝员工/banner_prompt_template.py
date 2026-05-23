@@ -233,7 +233,7 @@ def generate_banner_prompt(product_info, style_config=None):
 
 1. 其他产品特点:
 {regular_features_text}
-要求: 简洁清晰，图标+文字，作为补充信息
+要求: 简洁清晰，图标+文字，作为补充信息。**重要：必须显示所有特点，不要遗漏任何一条。**
 
 2. 适用场景展示:
 {len(scenes)}个场景: {scenes_text}

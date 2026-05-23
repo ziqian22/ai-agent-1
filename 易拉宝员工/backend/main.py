@@ -1012,31 +1012,22 @@ async def delete_generation_record(record_id: str):
 async def download_image(url: str):
     """下载图片（代理下载，解决跨域问题）"""
     try:
-        # 从 URL 中提取本地文件路径
-        if url.startswith(BASE_URL + "/"):
-            file_path = url.replace(BASE_URL + "/", "")
-        elif url.startswith("http://") or url.startswith("https://"):
-            # 从任何 URL 中提取路径
-            if "://" in url:
-                url_without_protocol = url.split("://", 1)[1]
-                if "/" in url_without_protocol:
-                    file_path = url_without_protocol.split("/", 1)[1]
-                else:
-                    file_path = url
-            else:
-                file_path = url
+        # 从 URL 中提取文件路径
+        # URL 格式: https://domain/results/banner_xxx.png
+        if "/results/" in url:
+            # 提取 results/banner_xxx.png 部分
+            file_path = url.split("/results/", 1)[1]
+            file_path = f"results/{file_path}"
         else:
-            file_path = url
+            raise HTTPException(status_code=400, detail="无效的图片 URL")
 
-        # 转换为绝对路径（使用后端目录作为基准）
+        # 构建完整路径（相对于 backend 目录）
         backend_dir = Path(__file__).parent
-        full_path = Path(file_path)
-        if not full_path.is_absolute():
-            full_path = backend_dir / file_path
+        full_path = backend_dir / file_path
 
         # 检查文件是否存在
         if not full_path.exists():
-            raise HTTPException(status_code=404, detail="文件不存在")
+            raise HTTPException(status_code=404, detail=f"文件不存在: {file_path}")
 
         # 返回文件
         return FileResponse(
