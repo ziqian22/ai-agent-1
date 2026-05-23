@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    container_name: banner-designer-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - RUNNINGHUB_API_KEY=${RUNNINGHUB_API_KEY}
+      - CLAUDE_BASE_URL=${CLAUDE_BASE_URL:-}
+    volumes:
+      # 持久化存储
+      - ./results:/app/results
+      - ./temp_uploads:/app/temp_uploads
+      - ./knowledge_base:/app/knowledge_base
+      - ./generation_history.json:/app/generation_history.json
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 可选：Nginx 反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: banner-designer-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  results:
+  temp_uploads:
+  knowledge_base:
