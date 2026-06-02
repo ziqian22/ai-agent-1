@@ -27,6 +27,7 @@ from banner_prompt_template import generate_banner_prompt
 from knowledge_base import KnowledgeBase
 from logo_library_manager import logo_library
 from conversation_state import get_style_preset  # 添加这个导入
+from r2_storage import supabase_storage, upload_image  # Supabase 存储
 
 app = FastAPI(title="易拉宝设计助手 API")
 
@@ -114,6 +115,32 @@ def save_generation_history(history: List[Dict[str, Any]]):
 
 # 生成记录存储
 generation_history: List[Dict[str, Any]] = load_generation_history()
+
+
+def get_image_url(file_path: str) -> str:
+    """
+    获取图片访问URL，优先上传到R2，失败则使用本地URL
+
+    Args:
+        file_path: 本地文件路径
+
+    Returns:
+        图片访问URL
+    """
+    file_name = Path(file_path).name
+
+    # 尝试上传到 R2
+    r2_url = upload_image(file_path, category="results")
+
+    if r2_url:
+        print(f"[INFO] ✅ 图片已上传到 R2: {r2_url}")
+        return r2_url
+    else:
+        # R2 未配置或上传失败，使用本地URL
+        local_url = f"{BASE_URL}/results/{file_name}"
+        print(f"[INFO] ⚠️ R2 不可用，使用本地URL: {local_url}")
+        return local_url
+
 
 # System Prompt
 SYSTEM_PROMPT = """你是易拉宝设计助手,一个真正的 AI Agent。
@@ -572,8 +599,7 @@ async def chat(request: ChatRequest):
                                 print(f"[WARNING] Logo {recommended_logo_id} 不存在，跳过 Logo 添加")
                                 # 如果 Logo 不存在，所有图片都使用原图
                                 for file_path in result_files:
-                                    file_name = Path(file_path).name
-                                    image_url = f"{BASE_URL}/results/{file_name}"
+                                    image_url = get_image_url(file_path)
                                     final_image_urls.append(image_url)
                             else:
                                 logo_path = logo_library.get_logo_path(recommended_logo_id)
@@ -611,24 +637,21 @@ async def chat(request: ChatRequest):
 
                                         print(f"[INFO] ✅ Logo 合成完成: {Path(file_path).name}")
 
-                                        # 生成 URL
-                                        file_name = Path(file_path).name
-                                        image_url = f"{BASE_URL}/results/{file_name}"
+                                        # 生成 URL（优先上传到 R2）
+                                        image_url = get_image_url(file_path)
                                         final_image_urls.append(image_url)
 
                                     except Exception as e:
                                         print(f"[ERROR] 为易拉宝 {idx+1} 添加 Logo 失败: {str(e)}")
                                         # 如果失败，使用原图
-                                        file_name = Path(file_path).name
-                                        image_url = f"{BASE_URL}/results/{file_name}"
+                                        image_url = get_image_url(file_path)
                                         final_image_urls.append(image_url)
 
                         except Exception as e:
                             print(f"[ERROR] 分析 Logo 失败: {str(e)}")
                             # 如果分析失败，所有图片都使用原图
                             for file_path in result_files:
-                                file_name = Path(file_path).name
-                                image_url = f"{BASE_URL}/results/{file_name}"
+                                image_url = get_image_url(file_path)
                                 final_image_urls.append(image_url)
 
                     print(f"[INFO] ✅ 所有易拉宝 Logo 添加完成")
@@ -1295,8 +1318,8 @@ async def compose_logo(request: ComposeLogoRequest):
         output_path = results_dir / output_filename
         banner.save(str(output_path), "PNG")
 
-        # 返回最终图片 URL
-        final_url = f"{BASE_URL}/results/{output_filename}"
+        # 返回最终图片 URL（优先上传到 R2）
+        final_url = get_image_url(str(output_path))
 
         return {
             "final_url": final_url,
