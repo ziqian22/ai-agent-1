@@ -6,7 +6,8 @@
       "Bash(python -c \"from r2_storage import upload_image; from pathlib import Path; test_dir = Path\\('test_temp'\\); test_dir.mkdir\\(exist_ok=True\\); test_file = test_dir / 'test.txt'; test_file.write_text\\('Test'\\); url = upload_image\\(str\\(test_file\\), 'test'\\); print\\('Result:', url\\); test_file.unlink\\(\\); test_dir.rmdir\\(\\)\")",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(python railway_persistence_solution.py)"
     ]
   }
 }

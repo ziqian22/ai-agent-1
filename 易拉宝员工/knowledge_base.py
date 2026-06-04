@@ -1,6 +1,7 @@
 """
 产品知识库管理模块
 用于存储和管理产品信息，支持持久化
+支持自动备份到 Supabase Storage
 """
 
 import json
@@ -9,6 +10,10 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 import shutil
+import httpx
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class KnowledgeBase:
@@ -31,6 +36,19 @@ class KnowledgeBase:
         self.files_dir = self.db_path / "files"
         self.files_dir.mkdir(exist_ok=True)
 
+        # Supabase 配置
+        self.supabase_url = os.getenv('SUPABASE_URL')
+        self.supabase_key = os.getenv('SUPABASE_KEY')
+        self.supabase_bucket = os.getenv('SUPABASE_BUCKET', 'banner-images')
+        self.backup_enabled = bool(self.supabase_url and self.supabase_key)
+
+        if self.backup_enabled:
+            print("[INFO] Supabase 备份已启用")
+            # 启动时尝试从 Supabase 恢复数据
+            self.restore_from_supabase()
+        else:
+            print("[WARN] Supabase 未配置，备份功能禁用")
+
         # 加载产品数据
         self.products = self._load_products()
 
@@ -50,8 +68,87 @@ class KnowledgeBase:
         try:
             with open(self.products_file, 'w', encoding='utf-8') as f:
                 json.dump(self.products, f, ensure_ascii=False, indent=2)
+
+            # 自动备份到 Supabase
+            if self.backup_enabled:
+                self.backup_to_supabase()
         except Exception as e:
             print(f"保存产品数据失败: {str(e)}")
+
+    def backup_to_supabase(self):
+        """备份 products.json 到 Supabase Storage"""
+        if not self.backup_enabled:
+            return
+
+        try:
+            # 读取 products.json 文件
+            with open(self.products_file, 'rb') as f:
+                file_data = f.read()
+
+            # 构建上传 URL
+            remote_path = "backups/products.json"
+            url = f"{self.supabase_url}/storage/v1/object/{self.supabase_bucket}/{remote_path}"
+
+            headers = {
+                "Authorization": f"Bearer {self.supabase_key}",
+                "Content-Type": "application/json"
+            }
+
+            # 上传文件（使用 POST 或 PUT）
+            with httpx.Client(timeout=30.0) as client:
+                # 先尝试更新（PUT）
+                response = client.put(url, headers=headers, content=file_data)
+
+                # 如果文件不存在，使用 POST 创建
+                if response.status_code == 404:
+                    url = f"{self.supabase_url}/storage/v1/object/{self.supabase_bucket}/{remote_path}"
+                    response = client.post(url, headers=headers, content=file_data)
+
+                if response.status_code in [200, 201]:
+                    print(f"[SUCCESS] 已备份到 Supabase: {remote_path}")
+                else:
+                    print(f"[WARN] 备份到 Supabase 失败: {response.status_code} - {response.text}")
+
+        except Exception as e:
+            print(f"[ERROR] 备份到 Supabase 失败: {str(e)}")
+
+    def restore_from_supabase(self):
+        """从 Supabase Storage 恢复 products.json"""
+        if not self.backup_enabled:
+            return
+
+        # 如果本地文件已存在且不为空，跳过恢复
+        if self.products_file.exists():
+            try:
+                with open(self.products_file, 'r', encoding='utf-8') as f:
+                    local_data = json.load(f)
+                    if local_data:
+                        print("[INFO] 本地产品数据已存在，跳过从 Supabase 恢复")
+                        return
+            except:
+                pass
+
+        try:
+            # 构建下载 URL
+            remote_path = "backups/products.json"
+            url = f"{self.supabase_url}/storage/v1/object/public/{self.supabase_bucket}/{remote_path}"
+
+            # 下载文件
+            with httpx.Client(timeout=30.0) as client:
+                response = client.get(url)
+
+                if response.status_code == 200:
+                    # 保存到本地
+                    with open(self.products_file, 'wb') as f:
+                        f.write(response.content)
+                    print(f"[SUCCESS] 已从 Supabase 恢复产品数据")
+                elif response.status_code == 404:
+                    print("[INFO] Supabase 上没有备份文件，使用空数据")
+                else:
+                    print(f"[WARN] 从 Supabase 恢复失败: {response.status_code}")
+
+        except Exception as e:
+            print(f"[ERROR] 从 Supabase 恢复失败: {str(e)}")
 
     def add_product(
         self,
