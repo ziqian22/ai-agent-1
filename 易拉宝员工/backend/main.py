@@ -90,7 +90,27 @@ GENERATION_HISTORY_FILE = Path("generation_history.json")
 
 # 加载生成记录
 def load_generation_history() -> List[Dict[str, Any]]:
-    """从文件加载生成记录"""
+    """从文件加载生成记录，如果本地没有则从 Supabase 恢复"""
+    # 先尝试从 Supabase 恢复（如果本地没有）
+    if not GENERATION_HISTORY_FILE.exists() and supabase_storage.enabled:
+        try:
+            print("[INFO] 本地无生成记录，尝试从 Supabase 恢复...")
+            remote_path = "backups/generation_history.json"
+
+            # 下载文件
+            public_url = f"{supabase_storage.supabase_url}/storage/v1/object/public/{supabase_storage.bucket_name}/{remote_path}"
+            response = httpx.get(public_url, timeout=30.0)
+
+            if response.status_code == 200:
+                with open(GENERATION_HISTORY_FILE, 'wb') as f:
+                    f.write(response.content)
+                print(f"[SUCCESS] 已从 Supabase 恢复生成记录")
+            elif response.status_code == 404:
+                print("[INFO] Supabase 上没有备份，使用空记录")
+        except Exception as e:
+            print(f"[WARN] 从 Supabase 恢复失败: {str(e)}")
+
+    # 加载本地文件
     if GENERATION_HISTORY_FILE.exists():
         try:
             with open(GENERATION_HISTORY_FILE, 'r', encoding='utf-8') as f:
@@ -102,12 +122,22 @@ def load_generation_history() -> List[Dict[str, Any]]:
 
 # 保存生成记录
 def save_generation_history(history: List[Dict[str, Any]]):
-    """保存生成记录到文件"""
+    """保存生成记录到文件并备份到 Supabase"""
     try:
         print(f"[DEBUG] 开始保存生成记录,共 {len(history)} 条")
         with open(GENERATION_HISTORY_FILE, 'w', encoding='utf-8') as f:
             json.dump(history, f, ensure_ascii=False, indent=2)
         print(f"[DEBUG] 生成记录保存成功: {GENERATION_HISTORY_FILE}")
+
+        # 自动备份到 Supabase
+        if supabase_storage.enabled:
+            try:
+                remote_path = "backups/generation_history.json"
+                url = supabase_storage.upload_file(str(GENERATION_HISTORY_FILE), remote_path)
+                if url:
+                    print(f"[SUCCESS] 生成记录已备份到 Supabase")
+            except Exception as e:
+                print(f"[WARN] 备份生成记录失败: {str(e)}")
     except Exception as e:
         print(f"[ERROR] 保存生成记录失败: {str(e)}")
         import traceback
