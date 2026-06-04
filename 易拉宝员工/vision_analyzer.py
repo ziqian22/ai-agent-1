@@ -52,7 +52,7 @@ class VisionAnalyzer:
             self.client = anthropic.Anthropic(api_key=api_key)
 
         # 使用更通用的模型名称，兼容中转服务
-        if base_url and "zhouyang168" in base_url:
+        if base_url and ("zhouyang168" in base_url or "yunwu.ai" in base_url):
             # 中转服务使用的模型名称
             self.model = "claude-opus-4-7"
         else:

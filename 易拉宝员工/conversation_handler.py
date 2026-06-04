@@ -29,7 +29,7 @@ class ClaudeConversationHandler:
             self.client = anthropic.Anthropic(api_key=api_key)
 
         # 使用中转服务的模型名称
-        if base_url and "zhouyang168" in base_url:
+        if base_url and ("zhouyang168" in base_url or "yunwu.ai" in base_url):
             self.model = "claude-opus-4-7"
         else:
             self.model = "claude-opus-4-20250514"
@@ -645,7 +645,7 @@ def is_quick_action(user_input: str) -> Optional[str]:
 只返回JSON，不要其他内容。"""
 
             response = self.client.messages.create(
-                model="claude-opus-4-20250514",
+                model=self.model,
                 max_tokens=1000,
                 temperature=0.3,
                 messages=[{
