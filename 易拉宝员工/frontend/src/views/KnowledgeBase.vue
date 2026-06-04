@@ -54,10 +54,14 @@
 
           <div class="product-content">
             <el-image
-              :src="product.image_path"
+              :src="product.image_url || product.image_path"
               fit="cover"
               class="product-image"
-            />
+            >
+              <template #error>
+                <div class="image-error">图片加载失败</div>
+              </template>
+            </el-image>
             <div class="product-info">
               <p><strong>品牌:</strong> {{ product.product_info.brand }}</p>
               <p><strong>类型:</strong> {{ product.product_info.product_type || '未分类' }}</p>

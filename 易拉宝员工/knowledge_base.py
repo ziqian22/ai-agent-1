@@ -150,6 +150,63 @@ class KnowledgeBase:
         except Exception as e:
             print(f"[ERROR] 从 Supabase 恢复失败: {str(e)}")
 
+    def _upload_file_to_supabase(self, local_path: str, remote_path: str) -> Optional[str]:
+        """
+        上传文件到 Supabase Storage
+
+        Args:
+            local_path: 本地文件路径
+            remote_path: 远程路径（如 'products/product_123/image.png'）
+
+        Returns:
+            文件的公开访问 URL，失败返回 None
+        """
+        if not self.backup_enabled:
+            return None
+
+        try:
+            # 读取文件
+            with open(local_path, 'rb') as f:
+                file_data = f.read()
+
+            # 构建上传 URL
+            url = f"{self.supabase_url}/storage/v1/object/{self.supabase_bucket}/{remote_path}"
+
+            headers = {
+                'Authorization': f'Bearer {self.supabase_key}',
+                'Content-Type': self._get_content_type(local_path),
+                'x-upsert': 'true'
+            }
+
+            # 上传
+            with httpx.Client(timeout=30.0) as client:
+                response = client.post(url, headers=headers, content=file_data)
+
+                if response.status_code in [200, 201]:
+                    public_url = f"{self.supabase_url}/storage/v1/object/public/{self.supabase_bucket}/{remote_path}"
+                    print(f"[SUCCESS] 上传文件到 Supabase: {remote_path}")
+                    return public_url
+                else:
+                    print(f"[WARN] 上传文件到 Supabase 失败: {response.status_code}")
+                    return None
+
+        except Exception as e:
+            print(f"[ERROR] 上传文件到 Supabase 失败: {str(e)}")
+            return None
+
+    def _get_content_type(self, file_path: str) -> str:
+        """根据文件扩展名获取 Content-Type"""
+        ext = Path(file_path).suffix.lower()
+        content_types = {
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.gif': 'image/gif',
+            '.webp': 'image/webp',
+            '.json': 'application/json',
+        }
+        return content_types.get(ext, 'application/octet-stream')
+
     def add_product(
         self,
         product_info: Dict[str, Any],
@@ -174,25 +231,39 @@ class KnowledgeBase:
         product_dir = self.files_dir / product_id
         product_dir.mkdir(exist_ok=True)
 
-        # 复制图片文件
+        # 复制图片文件到本地，并上传到 Supabase
         saved_image_path = None
+        saved_image_url = None
         if image_path and Path(image_path).exists():
             image_ext = Path(image_path).suffix
             saved_image_path = product_dir / f"product{image_ext}"
             shutil.copy(image_path, saved_image_path)
 
+            # 上传到 Supabase
+            if self.backup_enabled:
+                remote_path = f"products/{product_id}/product{image_ext}"
+                saved_image_url = self._upload_file_to_supabase(str(saved_image_path), remote_path)
+
         saved_logo_path = None
+        saved_logo_url = None
         if logo_path and Path(logo_path).exists():
             logo_ext = Path(logo_path).suffix
             saved_logo_path = product_dir / f"logo{logo_ext}"
             shutil.copy(logo_path, saved_logo_path)
+
+            # 上传到 Supabase
+            if self.backup_enabled:
+                remote_path = f"products/{product_id}/logo{logo_ext}"
+                saved_logo_url = self._upload_file_to_supabase(str(saved_logo_path), remote_path)
 
         # 构建产品记录
         product_record = {
             "id": product_id,
             "product_info": product_info,
             "image_path": str(saved_image_path) if saved_image_path else None,
+            "image_url": saved_image_url,  # Supabase URL
             "logo_path": str(saved_logo_path) if saved_logo_path else None,
+            "logo_url": saved_logo_url,  # Supabase URL
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat(),
             "generation_history": []  # 历史生成记录

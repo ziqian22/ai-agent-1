@@ -38,8 +38,8 @@
         <!-- 产品图片 -->
         <div class="product-image">
           <el-image
-            v-if="product.image_path"
-            :src="getImageUrl(product.image_path)"
+            v-if="product.image_url || product.image_path"
+            :src="getImageUrl(product)"
             fit="cover"
           >
             <template #error>
@@ -152,11 +152,23 @@ const selectProduct = (product) => {
 }
 
 // 获取图片URL
-const getImageUrl = (imagePath) => {
+const getImageUrl = (product) => {
+  // 优先使用 Supabase URL
+  if (product.image_url) {
+    return product.image_url
+  }
+
+  // 降级到本地路径
+  const imagePath = product.image_path
+  if (!imagePath) {
+    return ''
+  }
+
   // 如果是完整URL，直接返回
   if (imagePath.startsWith('http')) {
     return imagePath
   }
+
   // 否则构建本地路径
   return `/api/files/${encodeURIComponent(imagePath)}`
 }
