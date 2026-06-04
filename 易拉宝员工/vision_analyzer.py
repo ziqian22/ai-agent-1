@@ -91,7 +91,7 @@ class VisionAnalyzer:
             # 调用Claude Opus 4.7 Vision API
             response = self.client.messages.create(
                 model=self.model,
-                max_tokens=2000,
+                max_tokens=4096,  # 增加token限制，确保能返回完整的产品特点列表
                 messages=[{
                     "role": "user",
                     "content": [
