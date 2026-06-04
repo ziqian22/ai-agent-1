@@ -22,6 +22,10 @@ temp_uploads/
 knowledge_base/*.db
 generation_history.json
 
+# 数据文件（使用 Supabase 备份，不提交到 Git）
+knowledge_base/products.json
+knowledge_base/files/
+
 # Node
 node_modules/
 dist/
