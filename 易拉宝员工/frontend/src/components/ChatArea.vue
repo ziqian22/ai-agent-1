@@ -309,6 +309,12 @@ const sendMessage = async () => {
   const message = userInput.value.trim()
   userInput.value = ''
 
+  // ✅ 修复问题2: 如果没有 session_id，先生成一个
+  if (!sessionId.value) {
+    sessionId.value = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+    emit('session-created', sessionId.value)
+  }
+
   // 添加用户消息
   messages.value.push({
     role: 'user',
@@ -340,6 +346,12 @@ const sendMessage = async () => {
 // 发送快捷消息（点击按钮时）
 const sendQuickMessage = async (message) => {
   if (loading.value) return
+
+  // ✅ 修复问题2: 如果没有 session_id，先生成一个
+  if (!sessionId.value) {
+    sessionId.value = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+    emit('session-created', sessionId.value)
+  }
 
   // 添加用户消息
   messages.value.push({
@@ -385,8 +397,8 @@ const uploadFileAndAnalyze = async () => {
 
     const response = await uploadFile(formData)
 
-    // 如果是新 session,更新 sessionId
-    if (!sessionId.value) {
+    // ✅ 修复问题2: 始终使用后端返回的 session_id（后端可能创建了新的）
+    if (response.session_id && response.session_id !== sessionId.value) {
       sessionId.value = response.session_id
       emit('session-created', response.session_id)
     }

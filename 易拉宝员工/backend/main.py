@@ -380,12 +380,19 @@ async def upload_file(
                 new_product_image = str(file_path)
 
             # 构建分析结果消息,让 Claude 询问用户如何使用这些信息
+            # ✅ 修复问题3: 显示所有产品特点，不限制数量
+            features_list = file_analysis.get('features', [])
+            if features_list:
+                features_text = '\n'.join(f'  - {f}' for f in features_list)
+                features_display = f"\n**产品特点**:\n{features_text}"
+            else:
+                features_display = "\n**产品特点**: 未识别"
+
             analysis_text = f"""我分析了您上传的文件 {file.filename},提取到以下信息:
 
 **产品名称**: {file_analysis.get('product_name', '未识别')}
 **品牌**: {file_analysis.get('brand', '未识别')}
-**核心卖点**: {file_analysis.get('slogan', '未识别')}
-**产品特点**: {', '.join(file_analysis.get('features', [])[:3])}
+**核心卖点**: {file_analysis.get('slogan', '未识别')}{features_display}
 **适用场景**: {', '.join(file_analysis.get('scenes', []))}
 
 请问您上传这个文件是想:
@@ -458,13 +465,20 @@ async def upload_file(
             }
 
             # 生成分析结果消息
+            # ✅ 修复问题3: 显示所有产品特点，不限制数量
+            features_list = product_info.get('features', [])
+            if features_list:
+                features_text = chr(10).join(f'- {f}' for f in features_list)
+            else:
+                features_text = '- 未识别'
+
             analysis_text = f"""我已经分析了您上传的文件，识别到以下产品信息：
 
 **产品名称**：{product_info.get('product_name', '未识别')}
 **品牌**：{product_info.get('brand', '未识别')}
 **核心卖点**：{product_info.get('slogan', '未识别')}
 **产品特点**：
-{chr(10).join(f'- {f}' for f in product_info.get('features', [])[:5])}
+{features_text}
 **适用场景**：{', '.join(product_info.get('scenes', []))}
 
 请确认以上信息是否准确？如需修改请告诉我。"""
@@ -566,8 +580,15 @@ async def chat(request: ChatRequest):
 
                 generation_params = json.loads(json_str)
 
+                # ✅ 修复问题2: 检查 product_info 是否存在
+                product_info = session.get("product_info")
+                if not product_info:
+                    return ChatResponse(
+                        type="message",
+                        content="抱歉，请先上传产品图片或从知识库选择产品后再开始生成。"
+                    )
+
                 # 合并产品信息
-                product_info = session["product_info"]
                 product_info.update(generation_params)
 
                 # 获取风格配置（如果有的话）
@@ -579,12 +600,12 @@ async def chat(request: ChatRequest):
                 # 生成提示词（传入style_config）
                 prompt = generate_banner_prompt(product_info, style_config)
 
-                # 获取产品图片
+                # ✅ 修复问题2: 更友好的错误提示
                 product_image = session.get("product_image")
                 if not product_image:
                     return ChatResponse(
                         type="message",
-                        content="抱歉，没有找到产品图片，无法生成易拉宝。请重新上传包含产品图片的文件。"
+                        content="❌ 抱歉，没有找到产品图片，无法生成易拉宝。\n\n请按以下步骤操作：\n1. 点击左下角的图片按钮上传产品图片\n2. 或点击文件夹按钮从知识库选择产品\n3. 等待图片分析完成后再确认生成"
                     )
 
                 # 获取生成数量（默认5张）
@@ -942,14 +963,18 @@ async def use_product(product_id: str):
         # 构建产品信息描述
         product_info = product["product_info"]
 
-        # 获取图片路径
+        # ✅ 修复问题1: 改进路径解析逻辑，支持多种路径格式
         image_path = product.get("image_path")
         if not image_path:
             raise HTTPException(status_code=404, detail="产品没有图片")
 
-        # 如果路径是 URL 格式，提取本地路径部分
+        backend_dir = Path(__file__).parent
+        print(f"[DEBUG] 后端目录: {backend_dir}")
+        print(f"[DEBUG] 原始图片路径: {image_path}")
+
+        # 解析路径
         if image_path.startswith("http://") or image_path.startswith("https://"):
-            # 从完整 URL 中提取路径部分
+            # URL 格式，提取路径部分
             # URL 格式: https://domain.com/knowledge_base/files/product_xxx/product.png
             # 提取: knowledge_base/files/product_xxx/product.png
             if "://" in image_path:
@@ -958,21 +983,38 @@ async def use_product(product_id: str):
                     image_path = image_path.split("/", 1)[1]  # 移除域名
             print(f"[DEBUG] 从 URL 提取路径: {image_path}")
 
-        # 转换为绝对路径（使用后端目录作为基准）
-        backend_dir = Path(__file__).parent
+        # 转换为绝对路径
         image_path_obj = Path(image_path)
         if not image_path_obj.is_absolute():
-            # 相对路径，基于后端目录解析
-            image_path = str(backend_dir / image_path)
+            # 尝试多个可能的位置
+            possible_paths = [
+                backend_dir / image_path,  # 基于后端目录
+                backend_dir.parent / image_path,  # 基于项目根目录
+                Path(image_path)  # 直接路径
+            ]
 
-        # 检查文件是否存在
-        if not Path(image_path).exists():
-            print(f"[ERROR] 产品图片不存在: {image_path}")
-            print(f"[DEBUG] 后端目录: {backend_dir}")
-            print(f"[DEBUG] 原始路径: {product.get('image_path')}")
-            raise HTTPException(status_code=404, detail=f"产品图片不存在: {image_path}")
+            # 尝试找到存在的路径
+            found = False
+            for possible_path in possible_paths:
+                if possible_path.exists():
+                    image_path = str(possible_path)
+                    found = True
+                    print(f"[DEBUG] ✅ 找到图片: {image_path}")
+                    break
 
-        print(f"[DEBUG] 产品图片路径: {image_path}")
+            if not found:
+                error_msg = f"产品图片不存在，已尝试以下路径：\n"
+                for p in possible_paths:
+                    error_msg += f"  - {p}\n"
+                print(f"[ERROR] {error_msg}")
+                raise HTTPException(status_code=404, detail=error_msg)
+        else:
+            # 绝对路径，直接检查
+            if not Path(image_path).exists():
+                print(f"[ERROR] 产品图片不存在: {image_path}")
+                raise HTTPException(status_code=404, detail=f"产品图片不存在: {image_path}")
+
+        print(f"[DEBUG] 最终产品图片路径: {image_path}")
 
         # 构建用户消息 - 模拟用户从知识库选择了产品
         user_message = f"""[用户从知识库选择了产品]
