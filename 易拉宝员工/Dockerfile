@@ -24,14 +24,13 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 # 复制后端代码
 COPY backend/ ./backend/
 COPY *.py ./
-COPY knowledge_base/ ./knowledge_base/
 COPY logo_library/ ./logo_library/
 COPY workflows.json ./
 
-# 复制前端构建产物（如果需要后端服务前端）
+# 复制前端构建产物
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
-# 创建必要的目录
+# 创建必要的目录（knowledge_base 从 Supabase 恢复，不从 Git 复制）
 RUN mkdir -p results temp_uploads knowledge_base/files
 
 # 暴露端口
