@@ -963,58 +963,88 @@ async def use_product(product_id: str):
         # 构建产品信息描述
         product_info = product["product_info"]
 
-        # ✅ 修复问题1: 改进路径解析逻辑，支持多种路径格式
-        image_path = product.get("image_path")
-        if not image_path:
-            raise HTTPException(status_code=404, detail="产品没有图片")
+        # ✅ 修复问题1: 优先使用 Supabase URL，如果没有才解析本地路径
+        image_url = product.get("image_url")
+        if image_url:
+            # 如果有 Supabase URL，直接使用（需要下载到临时目录）
+            print(f"[DEBUG] 使用 Supabase URL: {image_url}")
 
-        backend_dir = Path(__file__).parent
-        print(f"[DEBUG] 后端目录: {backend_dir}")
-        print(f"[DEBUG] 原始图片路径: {image_path}")
+            try:
+                import httpx
+                temp_dir = Path("temp_uploads")
+                temp_dir.mkdir(exist_ok=True)
 
-        # 解析路径
-        if image_path.startswith("http://") or image_path.startswith("https://"):
-            # URL 格式，提取路径部分
-            # URL 格式: https://domain.com/knowledge_base/files/product_xxx/product.png
-            # 提取: knowledge_base/files/product_xxx/product.png
-            if "://" in image_path:
-                image_path = image_path.split("://", 1)[1]  # 移除协议
-                if "/" in image_path:
-                    image_path = image_path.split("/", 1)[1]  # 移除域名
-            print(f"[DEBUG] 从 URL 提取路径: {image_path}")
+                # 下载图片到临时目录
+                image_filename = f"kb_{product_id}_{Path(image_url).name}"
+                image_path = temp_dir / image_filename
 
-        # 转换为绝对路径
-        image_path_obj = Path(image_path)
-        if not image_path_obj.is_absolute():
-            # 尝试多个可能的位置
-            possible_paths = [
-                backend_dir / image_path,  # 基于后端目录
-                backend_dir.parent / image_path,  # 基于项目根目录
-                Path(image_path)  # 直接路径
-            ]
+                with httpx.Client(timeout=30.0) as client:
+                    response = client.get(image_url)
+                    if response.status_code == 200:
+                        with open(image_path, 'wb') as f:
+                            f.write(response.content)
+                        image_path = str(image_path)
+                        print(f"[DEBUG] ✅ 从 Supabase 下载成功: {image_path}")
+                    else:
+                        raise Exception(f"下载失败: {response.status_code}")
+            except Exception as e:
+                print(f"[ERROR] 从 Supabase 下载图片失败: {str(e)}")
+                # 降级到本地路径
+                image_url = None
 
-            # 尝试找到存在的路径
-            found = False
-            for possible_path in possible_paths:
-                if possible_path.exists():
-                    image_path = str(possible_path)
-                    found = True
-                    print(f"[DEBUG] ✅ 找到图片: {image_path}")
-                    break
+        if not image_url:
+            # 没有 Supabase URL，使用本地路径
+            image_path = product.get("image_path")
+            if not image_path:
+                raise HTTPException(status_code=404, detail="产品没有图片")
 
-            if not found:
-                error_msg = f"产品图片不存在，已尝试以下路径：\n"
-                for p in possible_paths:
-                    error_msg += f"  - {p}\n"
-                print(f"[ERROR] {error_msg}")
-                raise HTTPException(status_code=404, detail=error_msg)
-        else:
-            # 绝对路径，直接检查
-            if not Path(image_path).exists():
-                print(f"[ERROR] 产品图片不存在: {image_path}")
-                raise HTTPException(status_code=404, detail=f"产品图片不存在: {image_path}")
+            backend_dir = Path(__file__).parent
+            print(f"[DEBUG] 后端目录: {backend_dir}")
+            print(f"[DEBUG] 原始图片路径: {image_path}")
 
-        print(f"[DEBUG] 最终产品图片路径: {image_path}")
+            # 解析路径
+            if image_path.startswith("http://") or image_path.startswith("https://"):
+                # URL 格式，提取路径部分
+                # URL 格式: https://domain.com/knowledge_base/files/product_xxx/product.png
+                # 提取: knowledge_base/files/product_xxx/product.png
+                if "://" in image_path:
+                    image_path = image_path.split("://", 1)[1]  # 移除协议
+                    if "/" in image_path:
+                        image_path = image_path.split("/", 1)[1]  # 移除域名
+                print(f"[DEBUG] 从 URL 提取路径: {image_path}")
+
+            # 转换为绝对路径
+            image_path_obj = Path(image_path)
+            if not image_path_obj.is_absolute():
+                # 尝试多个可能的位置
+                possible_paths = [
+                    backend_dir / image_path,  # 基于后端目录
+                    backend_dir.parent / image_path,  # 基于项目根目录
+                    Path(image_path)  # 直接路径
+                ]
+
+                # 尝试找到存在的路径
+                found = False
+                for possible_path in possible_paths:
+                    if possible_path.exists():
+                        image_path = str(possible_path)
+                        found = True
+                        print(f"[DEBUG] ✅ 找到图片: {image_path}")
+                        break
+
+                if not found:
+                    error_msg = f"产品图片不存在，已尝试以下路径：\n"
+                    for p in possible_paths:
+                        error_msg += f"  - {p}\n"
+                    print(f"[ERROR] {error_msg}")
+                    raise HTTPException(status_code=404, detail=error_msg)
+            else:
+                # 绝对路径，直接检查
+                if not Path(image_path).exists():
+                    print(f"[ERROR] 产品图片不存在: {image_path}")
+                    raise HTTPException(status_code=404, detail=f"产品图片不存在: {image_path}")
+
+            print(f"[DEBUG] 最终产品图片路径: {image_path}")
 
         # 构建用户消息 - 模拟用户从知识库选择了产品
         user_message = f"""[用户从知识库选择了产品]

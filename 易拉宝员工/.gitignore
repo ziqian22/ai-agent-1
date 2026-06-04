@@ -22,11 +22,12 @@ temp_uploads/
 knowledge_base/*.db
 generation_history.json
 
-# 数据文件（使用 Supabase 备份，不提交到 Git）
-knowledge_base/products.json
-knowledge_base/files/
-backend/knowledge_base/products.json
-backend/knowledge_base/files/
+# 数据文件（✅ 已移除忽略规则，现在提交到 Git 以确保 Railway 部署可用）
+# 注意：Supabase 依然会备份，但本地文件也需要提交
+# knowledge_base/products.json
+# knowledge_base/files/
+# backend/knowledge_base/products.json
+# backend/knowledge_base/files/
 
 # Node
 node_modules/
