@@ -480,9 +480,18 @@ async def chat(request: ChatRequest):
         session_id = request.session_id
         user_message = request.message
 
-        # 检查 session 是否存在
+        # 检查 session 是否存在，如果不存在则创建一个空 session
         if session_id not in conversations:
-            raise HTTPException(status_code=404, detail="会话不存在，请先上传文件")
+            # 自动创建空 session，允许用户在没有上传文件的情况下开始对话
+            conversations[session_id] = {
+                "history": [],
+                "product_info": None,
+                "product_image": None,
+                "extracted_images": [],
+                "file_path": None,
+                "uploaded_files": []
+            }
+            print(f"[INFO] 为用户创建空 session: {session_id}")
 
         session = conversations[session_id]
         history = session["history"]
