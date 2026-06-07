@@ -1,0 +1,123 @@
+[
+  {
+    "id": "product_20260604_084535",
+    "product_info": {
+      "product_name": "HS007智能直饮机",
+      "brand": "PUDOW（上海普道水环境科技有限公司）",
+      "slogan": "告别阴阳水，持续出热水",
+      "features": [
+        "15L大热胆设计，热水供应不间断，适流取水无影响",
+        "经典P1外观设计，食量大气、与高端场合交相辉映",
+        "4重深度过滤，层层过滤，保障水质安全健康鲜活",
+        "LED-UV紫外杀菌，守好安全出水最后一关",
+        "多层环保材质，有效减少热量流失，更节省电能",
+        "定时开关机设计，早6晚6定时开关机，使用便捷又节能",
+        "IOT智能云平台，想用户所想，健康水质全生命周期管理",
+        "步进式加热系统",
+        "多重安全防护"
+      ],
+      "product_type": "智能直饮机/饮水机",
+      "scenes": [
+        "商务办公",
+        "宾馆企业",
+        "制造工厂",
+        "医院病房等"
+      ],
+      "colors": [
+        "白色",
+        "蓝色"
+      ]
+    },
+    "image_path": "https://ai-agent-1-production-4014.up.railway.app/knowledge_base/files/product_20260604_084535/product.png",
+    "image_url": "https://vkohvlsjskkseshzrxpq.supabase.co/storage/v1/object/public/banner-images/products/product_20260604_084535/product.png",
+    "logo_path": null,
+    "logo_url": null,
+    "created_at": "2026-06-04T08:45:35.750852",
+    "updated_at": "2026-06-04T08:45:35.750863",
+    "generation_history": []
+  },
+  {
+    "id": "product_20260604_100705",
+    "product_info": {
+      "product_name": "爵士H5智能直饮机",
+      "brand": "PUDOW (浦道)",
+      "slogan": "世出名门·内外兼修 大流量出水 有冰水更沁爽",
+      "features": [
+        "35L大容量热罐",
+        "3温出水设计",
+        "压缩机制冷",
+        "折叠式纳米晶炭颗粒过滤：余氯去除率99.5%，主滤芯寿命延长2倍",
+        "37CM接水空间：适配市面大多热水壶，方便水壶取水",
+        "304不锈钢热胆：耐腐耐热防异味，从源头杜绝安全隐患",
+        "过滤式提升泵箱：杂菌杂质99.99%，防止出水管路二次污染",
+        "NTC温控：双探针精准检测控温，多重过热安全防护",
+        "夜间节能模式：按需设置设备休眠时段，使用省电更节能",
+        "金属机械按键：机械式按键，牢固可靠，操作体验真实可控",
+        "IMD面板工艺：膜内注塑一体成型，工艺考究美观耐用",
+        "制热能力26L/H",
+        "热胆容积35L/18L",
+        "冰胆容积-/4L",
+        "净水流速1.5L/min",
+        "适用人数80-100人",
+        "功率2500W",
+        "过滤方式纳滤/NF",
+        "出水方式1开2温/1开1温1冰"
+      ],
+      "product_type": "智能直饮机/饮水机",
+      "scenes": [
+        "科技",
+        "互联网",
+        "金融",
+        "外企等办公要办公场所"
+      ],
+      "colors": [
+        "白色",
+        "蓝色"
+      ]
+    },
+    "image_path": "https://ai-agent-1-production-4014.up.railway.app/knowledge_base/files/product_20260604_100705/product.png",
+    "image_url": "https://vkohvlsjskkseshzrxpq.supabase.co/storage/v1/object/public/banner-images/products/product_20260604_100705/product.png",
+    "logo_path": null,
+    "logo_url": null,
+    "created_at": "2026-06-04T10:07:05.503332",
+    "updated_at": "2026-06-04T10:07:05.503342",
+    "generation_history": []
+  },
+  {
+    "id": "product_20260604_110753",
+    "product_info": {
+      "product_name": "勇士E6即开直饮机 PDI461",
+      "brand": "PUDOW 上海普渡环境科技有限公司",
+      "slogan": "节能减碳先锋 待机0能耗 开水不间断",
+      "features": [
+        "节能40%以上：比常规节能加热方式节能40%",
+        "纳米单晶盾石英加热：非金属材质，无重金属加热，更安全",
+        "无水箱设计：无加热水箱，杜绝千滚水和二次污染",
+        "过流式紫外杀菌：杀菌率达99.999%，防止出水管路二次污染",
+        "加热模组不沾水垢：纳米级镀膜技术，不沾水垢，使用寿命更长",
+        "沸腾可视窗口：加热沸腾过程清洗可见，健康好水看得见",
+        "贴心等侍倒计时：开水出水倒计时，接水安全防烫伤",
+        "38CM接水空间：适配市面大多数热水壶，方便水壶取水"
+      ],
+      "product_type": "饮水机",
+      "scenes": [
+        "国央企",
+        "政府",
+        "事业单位",
+        "机场",
+        "车站"
+      ],
+      "colors": [
+        "黑色",
+        "金色(金属装饰)"
+      ]
+    },
+    "image_path": "knowledge_base/files/product_20260604_110753/product.png",
+    "image_url": "https://vkohvlsjskkseshzrxpq.supabase.co/storage/v1/object/public/banner-images/products/product_20260604_110753/product.png",
+    "logo_path": null,
+    "logo_url": null,
+    "created_at": "2026-06-04T11:07:54.186714",
+    "updated_at": "2026-06-04T11:07:54.186725",
+    "generation_history": []
+  }
+]

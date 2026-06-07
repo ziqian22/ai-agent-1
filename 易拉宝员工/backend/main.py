@@ -18,6 +18,9 @@ import base64
 from pathlib import Path
 from datetime import datetime
 import sys
+import psycopg2
+from psycopg2.extras import Json
+from psycopg2.pool import SimpleConnectionPool
 
 # 添加父目录到路径，以便导入现有模块
 sys.path.append(str(Path(__file__).parent.parent))
@@ -85,6 +88,117 @@ else:
 
 # 对话历史存储（生产环境建议用 Redis）
 conversations: Dict[str, Dict[str, Any]] = {}
+
+# 数据库连接池（Railway Postgres）
+db_pool: Optional[SimpleConnectionPool] = None
+
+def init_database():
+    """初始化数据库连接和表结构"""
+    global db_pool
+
+    database_url = os.getenv("DATABASE_URL")
+
+    if not database_url:
+        print("[WARN] 未找到 DATABASE_URL，将使用内存存储（重启后数据丢失）")
+        return
+
+    try:
+        # 创建连接池
+        db_pool = SimpleConnectionPool(
+            minconn=1,
+            maxconn=10,
+            dsn=database_url
+        )
+
+        # 创建表
+        conn = db_pool.getconn()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS conversations (
+                session_id TEXT PRIMARY KEY,
+                data JSONB NOT NULL,
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+
+        conn.commit()
+        cursor.close()
+        db_pool.putconn(conn)
+
+        print("[SUCCESS] 数据库连接成功，表已创建")
+
+    except Exception as e:
+        print(f"[ERROR] 数据库初始化失败: {str(e)}")
+        print("[WARN] 将使用内存存储（重启后数据丢失）")
+        db_pool = None
+
+def load_conversations_from_db() -> Dict[str, Dict[str, Any]]:
+    """从数据库加载所有对话"""
+    if not db_pool:
+        return {}
+
+    try:
+        conn = db_pool.getconn()
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT session_id, data FROM conversations")
+        rows = cursor.fetchall()
+
+        conversations_data = {}
+        for session_id, data in rows:
+            conversations_data[session_id] = data
+
+        cursor.close()
+        db_pool.putconn(conn)
+
+        print(f"[INFO] 从数据库加载了 {len(conversations_data)} 个对话")
+        return conversations_data
+
+    except Exception as e:
+        print(f"[ERROR] 从数据库加载对话失败: {str(e)}")
+        return {}
+
+def save_conversation_to_db(session_id: str, data: Dict[str, Any]):
+    """保存单个对话到数据库"""
+    if not db_pool:
+        return  # 如果没有数据库，只保存在内存
+
+    try:
+        conn = db_pool.getconn()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO conversations (session_id, data, updated_at)
+            VALUES (%s, %s, NOW())
+            ON CONFLICT (session_id)
+            DO UPDATE SET data = %s, updated_at = NOW()
+        """, (session_id, Json(data), Json(data)))
+
+        conn.commit()
+        cursor.close()
+        db_pool.putconn(conn)
+
+    except Exception as e:
+        print(f"[ERROR] 保存对话到数据库失败: {str(e)}")
+
+def delete_conversation_from_db(session_id: str):
+    """从数据库删除对话"""
+    if not db_pool:
+        return
+
+    try:
+        conn = db_pool.getconn()
+        cursor = conn.cursor()
+
+        cursor.execute("DELETE FROM conversations WHERE session_id = %s", (session_id,))
+
+        conn.commit()
+        cursor.close()
+        db_pool.putconn(conn)
+
+    except Exception as e:
+        print(f"[ERROR] 从数据库删除对话失败: {str(e)}")
 
 # 生成记录存储文件
 GENERATION_HISTORY_FILE = Path("generation_history.json")
@@ -289,6 +403,33 @@ SYSTEM_PROMPT = """你是易拉宝设计助手,一个真正的 AI Agent。
 - 禁止在展示信息摘要的同时输出 [GENERATE_BANNER]
 - 禁止在用户未确认的情况下输出 [GENERATE_BANNER]
 - 禁止跳过信息摘要直接生成
+
+⚠️ 修改已生成的易拉宝:
+
+如果用户已经生成过易拉宝,现在想要修改(如"换个风格"、"调整颜色"、"改成商务风"),你必须:
+
+第1步 - 展示修改对比:
+```
+好的！我将为您重新生成易拉宝。
+
+【产品信息】（保持不变）
+- 产品名称: XXX
+- 品牌: XXX
+- 核心卖点: XXX
+
+【修改内容】
+- 原设计: XXX风格,XXX色调,X张
+- 新设计: XXX风格,XXX色调,X张
+
+请确认是否按照新设计重新生成？
+```
+
+第2步 - 等待用户确认:
+- **必须等待**用户明确确认后才能输出 [GENERATE_BANNER]
+- 如果用户再次提出修改,更新方案并重新展示对比
+
+第3步 - 输出生成指令:
+确认后才输出 [GENERATE_BANNER] {...}
 
 记住: 你是 Agent,要主动理解用户意图,灵活收集信息,但**必须等待用户明确确认后才能开始生成**。
 """
@@ -555,10 +696,52 @@ async def chat(request: ChatRequest):
             client = anthropic.Anthropic(api_key=CLAUDE_API_KEY)
             model = "claude-opus-4-20250514"
 
+        # 🎯 构建增强的 system prompt（如果有生成记录，添加上下文）
+        enhanced_system = SYSTEM_PROMPT
+
+        if session.get("last_generation"):
+            context_parts = []
+
+            # 产品信息
+            if session.get("product_info"):
+                product_info = session["product_info"]
+                features_list = product_info.get('features', [])
+                features_text = ', '.join(features_list[:3]) if features_list else '无'
+
+                context_parts.append(f"""
+【当前产品信息】
+- 产品名称: {product_info.get('product_name', 'N/A')}
+- 品牌: {product_info.get('brand', 'N/A')}
+- 核心卖点: {product_info.get('slogan', 'N/A')}
+- 产品特点: {features_text}
+- 适用场景: {', '.join(product_info.get('scenes', []))}
+""")
+
+            # 已生成的易拉宝信息
+            last_gen = session["last_generation"]
+            context_parts.append(f"""
+【已生成的易拉宝】
+- 设计风格: {last_gen.get('style', 'N/A')}
+- 主色调: {last_gen.get('main_colors', 'N/A')}
+- 生成数量: {last_gen.get('num_images', 0)} 张
+- 生成时间: {last_gen.get('created_at', 'N/A')}
+- 状态: 已完成
+""")
+
+            if context_parts:
+                enhanced_system = SYSTEM_PROMPT + "\n\n" + "=" * 60 + "\n" + "\n".join(context_parts) + "\n" + "=" * 60 + """
+
+⚠️ 重要提示（当前对话已有生成记录）:
+- 用户说"换个风格"、"调整"、"修改"、"重新生成"时，指的是基于上述已生成的易拉宝进行修改
+- 产品信息保持不变，只修改设计参数（风格、颜色等）
+- 不需要重新询问产品名称、品牌等基本信息
+- 必须展示【修改内容】对比（原设计 vs 新设计），然后等待用户确认
+"""
+
         response = client.messages.create(
             model=model,
             max_tokens=4096,
-            system=SYSTEM_PROMPT,
+            system=enhanced_system,  # ← 使用增强的 system prompt
             messages=history
         )
 
@@ -748,6 +931,30 @@ async def chat(request: ChatRequest):
                         except Exception as e:
                             print(f"添加知识库生成记录失败: {str(e)}")
 
+                    # 🎯 保存完整生成信息到 session（用于后续修改）
+                    conversations[session_id].update({
+                        "style_config": {
+                            "name": generation_params.get("style", ""),
+                            "colors": generation_params.get("main_colors", ""),
+                            "description": generation_params.get("style", "")
+                        },
+                        "generation_params": generation_params,
+                        "generated_images": final_image_urls,
+                        "generated_files": result_files,
+                        "last_generation": {
+                            "style": generation_params.get("style", ""),
+                            "main_colors": generation_params.get("main_colors", ""),
+                            "num_images": num_images,
+                            "created_at": datetime.now().isoformat(),
+                            "generation_id": generation_record["id"]
+                        }
+                    })
+                    print(f"[DEBUG] 已保存生成信息到 session[{session_id}]")
+
+                    # 🎯 保存到数据库
+                    save_conversation_to_db(session_id, conversations[session_id])
+                    print(f"[DEBUG] 已保存对话到数据库")
+
                     # 返回生成结果
                     return ChatResponse(
                         type="result",
@@ -803,6 +1010,9 @@ async def delete_session(session_id: str):
     """删除会话"""
     if session_id in conversations:
         del conversations[session_id]
+        # 🎯 从数据库删除
+        delete_conversation_from_db(session_id)
+        print(f"[DEBUG] 已从数据库删除对话: {session_id}")
         return {"message": "会话已删除"}
     raise HTTPException(status_code=404, detail="会话不存在")
 
@@ -1447,3 +1657,231 @@ async def compose_logo(request: ComposeLogoRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"合成失败: {str(e)}")
+
+
+# ==================== 页面使用精灵助手 API ====================
+
+# 帮助助手的 System Prompt
+HELP_ASSISTANT_PROMPT = """你是易拉宝AI设计助手的"页面使用精灵"，一个专业、友好的使用指导助手。
+
+你的职责：
+- 帮助用户了解系统的所有功能和使用方法
+- 回答用户关于页面操作的问题
+- 对于系统没有的功能，诚实告知用户
+- 用简洁、清晰的语言回答
+
+## 系统功能说明
+
+### 1. Agent 对话（主要功能）
+这是系统的核心功能，用于生成易拉宝设计。
+
+**使用流程：**
+1. 上传产品图片或文档（PDF/Word/PPT）
+2. AI自动分析并提取产品信息
+3. 通过自然对话收集必要信息：
+   - 必需：产品名称、品牌名称
+   - 可选：核心卖点、产品特点、适用场景、设计风格、主色调
+4. 选择设计风格（6种可选）
+5. 确认信息后开始生成
+6. 等待2-5分钟，获得多张易拉宝设计稿
+
+**支持的文件格式：**
+- 图片：PNG、JPG、JPEG
+- 文档：PDF、Word (.docx)、PPT (.pptx)
+
+**设计风格：**
+1. 科技感 - 现代、智能、清爽
+2. 简约商务 - 高端、克制、精致
+3. 自然清新 - 健康、环保、舒适
+4. 时尚活力 - 活力、年轻、创新
+5. 高端奢华 - 高端、奢华、尊贵
+6. 具体场景 - 真实场景、生活化（需要描述具体场景）
+
+**生成参数：**
+- 尺寸：80cm × 200cm（标准易拉宝尺寸）
+- 分辨率：2K 高清
+- 数量：默认5张，可自定义1-10张
+
+### 2. 知识库管理
+保存和管理常用产品信息，方便快速复用。
+
+**功能：**
+- 查看所有已保存的产品
+- 搜索产品（按产品名称或品牌）
+- 使用产品（点击"使用"按钮，自动加载到对话中）
+- 编辑产品信息
+- 删除产品
+
+**如何保存到知识库：**
+- 上传文件时，勾选"保存到知识库"选项
+
+**优势：**
+- 快速开始：秒级加载产品信息
+- 信息复用：同一产品可生成多种风格
+- 统一管理：集中管理所有产品资料
+
+### 3. 生成记录
+查看所有历史生成记录，随时下载往期作品。
+
+**功能：**
+- 按时间倒序显示所有生成记录
+- 查看生成的易拉宝图片
+- 下载图片到本地
+- 删除不需要的记录
+
+**数据持久化：**
+- 所有生成记录和图片永久保存
+- 自动备份到云端存储
+
+### 4. 页面操作说明
+
+**左侧导航栏：**
+- Agent 对话：主要功能，生成易拉宝
+- 知识库管理：管理产品信息
+- 生成记录：查看历史记录
+
+**对话区操作：**
+- 左下角上传按钮：上传产品图片或文档
+- 重新开始按钮：清除当前对话，重新开始
+- 输入框：与AI助手对话
+- 发送按钮：发送消息
+
+**图片操作：**
+- 点击图片：查看大图
+- 下载按钮：保存图片到本地
+
+## 系统没有的功能（需要诚实告知）
+
+以下功能目前系统**不支持**：
+- ❌ 手动编辑易拉宝设计（不支持拖拽、调整位置等）
+- ❌ 导出为 PSD/AI 等设计源文件（只支持 PNG）
+- ❌ 批量上传多个产品（只能逐个上传）
+- ❌ 团队协作功能（多人共享知识库）
+- ❌ 版本管理（设计稿版本对比）
+- ❌ 自定义Logo（Logo由系统自动选择和合成）
+- ❌ 视频易拉宝（只支持静态图片）
+
+## 常见问题快速回答
+
+**Q: 如何上传图片？**
+A: 点击左下角的上传按钮（📤图标），选择产品图片即可。系统会自动分析图片内容。
+
+**Q: 生成需要多长时间？**
+A: 一般2-5分钟，取决于生成数量和系统负载。
+
+**Q: 可以生成多少张？**
+A: 默认5张，可以自定义1-10张。一次生成多张可以获得更多设计选择。
+
+**Q: 如何更换设计风格？**
+A: 完成一次生成后，可以在对话中直接说"请用XX风格再生成一版"，系统会使用相同的产品信息生成新风格。
+
+**Q: 知识库有什么用？**
+A: 保存常用产品信息，下次直接从知识库调用，无需重新上传和输入，节省50%以上时间。
+
+**Q: 对生成结果不满意怎么办？**
+A: 可以：1) 重新生成；2) 更换设计风格；3) 调整产品信息（如主色调、特点描述等）。
+
+## 回答原则
+
+1. **简洁明了**：用最少的文字说清楚
+2. **分步骤**：复杂操作分步说明
+3. **诚实**：系统没有的功能直接告知
+4. **友好**：保持亲切、耐心的语气
+5. **举例**：必要时提供具体例子
+
+现在，请根据用户的问题，提供专业、友好的帮助！
+"""
+
+
+class HelpChatRequest(BaseModel):
+    """帮助助手对话请求"""
+    message: str
+    history: List[Dict[str, str]] = []
+
+
+@app.post("/api/help/chat")
+async def help_chat(request: HelpChatRequest):
+    """
+    页面使用精灵助手对话接口
+    """
+    try:
+        user_message = request.message
+        history = request.history
+
+        # 构建对话历史
+        messages = []
+        for msg in history[-10:]:  # 只保留最近10条消息
+            messages.append({
+                "role": msg["role"],
+                "content": msg["content"]
+            })
+
+        # 添加当前用户消息
+        messages.append({
+            "role": "user",
+            "content": user_message
+        })
+
+        # 调用 Claude Haiku
+        if CLAUDE_BASE_URL:
+            client = anthropic.Anthropic(api_key=CLAUDE_API_KEY, base_url=CLAUDE_BASE_URL)
+        else:
+            client = anthropic.Anthropic(api_key=CLAUDE_API_KEY)
+
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1024,
+            system=HELP_ASSISTANT_PROMPT,
+            messages=messages
+        )
+
+        assistant_reply = response.content[0].text
+
+        return {
+            "reply": assistant_reply
+        }
+
+    except Exception as e:
+        print(f"[ERROR] 帮助助手对话失败: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"对话失败: {str(e)}")
+
+
+# ==================== 页面使用精灵助手 API 结束 ====================
+
+
+# ==================== 应用启动 ====================
+
+@app.on_event("startup")
+async def startup_event():
+    """应用启动时执行"""
+    print("[INFO] 应用启动中...")
+
+    # 初始化数据库
+    init_database()
+
+    # 从数据库加载对话
+    global conversations
+    loaded_conversations = load_conversations_from_db()
+    if loaded_conversations:
+        conversations = loaded_conversations
+        print(f"[SUCCESS] 已加载 {len(conversations)} 个对话")
+    else:
+        print("[INFO] 没有历史对话，从空开始")
+
+    print("[SUCCESS] 应用启动完成")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """应用关闭时执行"""
+    print("[INFO] 应用关闭中...")
+
+    # 关闭数据库连接池
+    if db_pool:
+        db_pool.closeall()
+        print("[INFO] 数据库连接已关闭")
+
+    print("[INFO] 应用已关闭")
+

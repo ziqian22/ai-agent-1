@@ -62,6 +62,9 @@
         </el-main>
       </el-container>
     </el-container>
+
+    <!-- 页面使用精灵助手 -->
+    <HelpAssistant />
   </div>
 </template>
 
@@ -72,6 +75,7 @@ import { ElMessageBox } from 'element-plus'
 import ChatArea from './components/ChatArea.vue'
 import KnowledgeBase from './views/KnowledgeBase.vue'
 import GenerationHistory from './views/GenerationHistory.vue'
+import HelpAssistant from './components/HelpAssistant.vue'
 
 const sessionId = ref(null)
 const activeMenu = ref('chat')
